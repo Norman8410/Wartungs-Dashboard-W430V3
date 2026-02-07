@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Unotron Wartung - Prozentual V1.4</title>
+    <title>Unotron Wartung - V1.8</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -12,14 +12,14 @@
         :root { --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-light-blue: #00b5e2; --bosch-green: #008a4f; --bosch-gray: #eff1f2; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bosch-gray); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        .nav-drawer { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.3); transition: 0.3s ease-in-out; z-index: 3000; padding-top: 20px; }
+        /* Hamburger Menü & Drawer */
+        .nav-drawer { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.3); transition: 0.3s ease; z-index: 5000; padding-top: 20px; }
         .nav-drawer.open { left: 0; }
-        .nav-item { padding: 15px 25px; display: flex; align-items: center; color: #404040; text-decoration: none; font-weight: 600; border-bottom: 1px solid #f0f0f0; transition: 0.2s; cursor: pointer; }
-        .nav-item:hover { background: #f8f9fa; color: var(--bosch-blue); }
+        .nav-item { padding: 15px 25px; display: flex; align-items: center; color: #404040; text-decoration: none; font-weight: 600; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
         .nav-item.active { border-left: 5px solid var(--bosch-red); background: #fdfdfd; color: var(--bosch-red); }
-        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2500; backdrop-filter: blur(2px); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 4500; backdrop-filter: blur(2px); }
 
-        .top-bar { height: 45px; width: 100%; background: linear-gradient(90deg, #d50000 0%, #d50000 25%, #003a6c 25%, #003a6c 50%, #00b5e2 50%, #00b5e2 75%, #008a4f 75%, #008a4f 100%); display: flex; align-items: center; padding: 0 15px; box-sizing: border-box; color: white; }
+        .top-bar { height: 45px; width: 100%; background: linear-gradient(90deg, #d50000 0%, #d50000 25%, #003a6c 25%, #003a6c 50%, #00b5e2 50%, #00b5e2 75%, #008a4f 75%, #008a4f 100%); display: flex; align-items: center; padding: 0 15px; box-sizing: border-box; color: white; position: relative; z-index: 4000; }
         .menu-btn { cursor: pointer; font-size: 24px; margin-right: 15px; }
         
         .header { background: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -31,10 +31,9 @@
 
         .control-row { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; border-left: 8px solid #ccc; margin-bottom: 5px; gap: 8px; }
         .nav-btn { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: white; font-weight: bold; border-radius: 2px; font-size: 11px; }
-        .btn-wp { background: var(--bosch-red); color: white; border: none; }
         .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
         
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 4000; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 6000; }
         .modal-box { background: white; padding: 30px; border-top: 8px solid var(--bosch-red); width: 350px; text-align: center; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; box-sizing: border-box; }
     </style>
@@ -76,28 +75,17 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database(), auth = firebase.auth();
 
-        // FAHRPLAN AUS CSV
         const FAHRPLAN = [
-            { klick: 0, ziel: 2000, pkg: "P1, P2" },
-            { klick: 1, ziel: 4000, pkg: "P3" },
-            { klick: 2, ziel: 10000, pkg: "P1" },
-            { klick: 3, ziel: 14000, pkg: "P5" },
-            { klick: 4, ziel: 18000, pkg: "P1, P2" },
-            { klick: 5, ziel: 26000, pkg: "P1" },
-            { klick: 6, ziel: 28000, pkg: "P6, P7" },
-            { klick: 7, ziel: 30000, pkg: "P3" },
-            { klick: 8, ziel: 34000, pkg: "P1, P2" },
-            { klick: 9, ziel: 42000, pkg: "P1" },
-            { klick: 10, ziel: 50000, pkg: "P1, P2" },
-            { klick: 11, ziel: 56000, pkg: "P3" },
-            { klick: 12, ziel: 58000, pkg: "P1" },
-            { klick: 13, ziel: 66000, pkg: "P1, P2" },
-            { klick: 14, ziel: 74000, pkg: "P1" },
-            { klick: 15, ziel: 80000, pkg: "P6" },
-            { klick: 16, ziel: 82000, pkg: "P3" },
-            { klick: 17, ziel: 86000, pkg: "P1, P2" },
-            { klick: 18, ziel: 90000, pkg: "P1" },
-            { klick: 19, ziel: 98000, pkg: "P1, P2" },
+            { klick: 0, ziel: 2000, pkg: "P1, P2" }, { klick: 1, ziel: 4000, pkg: "P3" },
+            { klick: 2, ziel: 10000, pkg: "P1" }, { klick: 3, ziel: 14000, pkg: "P5" },
+            { klick: 4, ziel: 18000, pkg: "P1, P2" }, { klick: 5, ziel: 26000, pkg: "P1" },
+            { klick: 6, ziel: 28000, pkg: "P6, P7" }, { klick: 7, ziel: 30000, pkg: "P3" },
+            { klick: 8, ziel: 34000, pkg: "P1, P2" }, { klick: 9, ziel: 42000, pkg: "P1" },
+            { klick: 10, ziel: 50000, pkg: "P1, P2" }, { klick: 11, ziel: 56000, pkg: "P3" },
+            { klick: 12, ziel: 58000, pkg: "P1" }, { klick: 13, ziel: 66000, pkg: "P1, P2" },
+            { klick: 14, ziel: 74000, pkg: "P1" }, { klick: 15, ziel: 80000, pkg: "P6" },
+            { klick: 16, ziel: 82000, pkg: "P3" }, { klick: 17, ziel: 86000, pkg: "P1, P2" },
+            { klick: 18, ziel: 90000, pkg: "P1" }, { klick: 19, ziel: 98000, pkg: "P1, P2" },
             { klick: 20, ziel: 104000, pkg: "WP" }
         ];
 
@@ -105,8 +93,10 @@
         let chart = null;
 
         function toggleMenu() {
-            const isOpen = document.getElementById('navDrawer').classList.toggle('open');
-            document.getElementById('drawerOverlay').style.display = isOpen ? 'block' : 'none';
+            const drawer = document.getElementById('navDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            const isOpen = drawer.classList.toggle('open');
+            overlay.style.display = isOpen ? 'block' : 'none';
         }
 
         db.ref('maintenanceStateUnotron').on('value', snap => {
@@ -120,25 +110,21 @@
         function updateUI() {
             const data = state.cloudRawData.map(item => {
                 const id = item.STATIONNO;
-                const totalIst = parseInt(item['COUNT(*)']) || 0;
-                const offset = state.offsets[id] || 0;
-                const relIst = totalIst - offset;
-                
+                const relIst = (parseInt(item['COUNT(*)']) || 0) - (state.offsets[id] || 0);
                 const klick = state.clickCounts[id] || 0;
                 const stufe = FAHRPLAN.find(f => f.klick === klick) || FAHRPLAN[FAHRPLAN.length-1];
                 const prev = klick > 0 ? FAHRPLAN.find(f => f.klick === klick - 1).ziel : 0;
-
-                const windowSize = stufe.ziel - prev;
+                
                 const used = relIst - prev;
-                const prozent = (used / windowSize) * 100;
+                const prozent = (used / (stufe.ziel - prev)) * 100;
                 const rest = stufe.ziel - relIst;
                 
-                let color = "#008a4f"; // Grün
-                if (prozent >= 100) color = "#8b0000"; // Dunkelrot
-                else if (prozent >= 95) color = "#d50000"; // Bosch-Rot
-                else if (prozent >= 80) color = "#ffa500"; // Orange
+                let color = "#008a4f";
+                if (prozent >= 100) color = "#8b0000";
+                else if (prozent >= 95) color = "#d50000";
+                else if (prozent >= 80) color = "#ffa500";
 
-                return { id, rest, color, ist: relIst, pkg: stufe.pkg, klick, prozent: Math.max(0, prozent) };
+                return { id, rest, color, ist: relIst, pkg: stufe.pkg, klick, prozent, ziel: stufe.ziel };
             }).sort((a,b) => a.rest - b.rest);
 
             const list = document.getElementById('machineList');
@@ -146,36 +132,18 @@
 
             list.innerHTML = data.map(d => `
                 <div class="control-row" style="border-left-color:${d.color}">
-                    <div style="flex:1.2">
-                        <b>U${d.id}</b><br>
-                        <small>${d.pkg} | Ist: ${d.ist.toLocaleString()}</small>
-                    </div>
-                    <div style="flex:1; text-align:right; font-weight:bold; font-size:15px; margin-right:10px;">
+                    <div style="flex:1.2"><b>U${d.id}</b><br><small>${d.pkg} | Ist: ${d.ist.toLocaleString()}</small></div>
+                    <div style="flex:0.8; text-align:right; font-weight:bold;">
                         ${Math.round(d.rest).toLocaleString()}
                         <div style="font-size:10px; font-weight:normal; color:gray;">${Math.round(d.prozent)}%</div>
                     </div>
                     <div style="display:flex; gap:3px;">
                         <button class="nav-btn" ${isLogged && d.klick > 0 ? '' : 'disabled'} onclick="changeKlick('${d.id}', -1)">-</button>
                         <button class="nav-btn" ${isLogged && d.prozent >= 80 ? '' : 'disabled'} onclick="changeKlick('${d.id}', 1)">+</button>
-                        <button class="nav-btn btn-wp" ${isLogged && d.ist >= 104000 ? '' : 'disabled'} onclick="wpReset('${d.id}')">WP</button>
                     </div>
                 </div>
             `).join('');
             renderChart(data);
-        }
-
-        async function changeKlick(id, val) {
-            const current = state.clickCounts[id] || 0;
-            const newVal = Math.max(0, Math.min(FAHRPLAN.length - 1, current + val));
-            await db.ref(`maintenanceStateUnotron/clickCounts/${id}`).set(newVal);
-        }
-
-        async function wpReset(id) {
-            if(confirm("Full WP Reset für U" + id + "?")) {
-                const newOffset = (state.offsets[id] || 0) + 104000;
-                await db.ref(`maintenanceStateUnotron/offsets/${id}`).set(newOffset);
-                await db.ref(`maintenanceStateUnotron/clickCounts/${id}`).set(0);
-            }
         }
 
         function renderChart(data) {
@@ -186,13 +154,60 @@
                 plugins: [ChartDataLabels],
                 data: {
                     labels: data.map(d => "U" + d.id),
-                    datasets: [{ data: data.map(d => d.rest), backgroundColor: data.map(d => d.color) }]
+                    datasets: [{ 
+                        data: data.map(d => d.rest), 
+                        backgroundColor: data.map(d => d.color),
+                        borderRadius: 4
+                    }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', rotation: -90, font: { weight: 'bold' }, formatter: Math.round } }
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            backgroundColor: 'white',
+                            titleColor: 'black',
+                            titleFont: { size: 16, weight: 'bold' },
+                            bodyColor: '#333',
+                            bodyFont: { size: 13 },
+                            borderColor: '#ddd',
+                            borderWidth: 1,
+                            padding: 15,
+                            displayColors: true,
+                            callbacks: {
+                                title: (ctx) => "Station " + ctx[0].label,
+                                label: (ctx) => {
+                                    const d = data[ctx.dataIndex];
+                                    const status = d.prozent >= 100 ? "ÜBERFÄLLIG" : d.prozent >= 95 ? "KRITISCH" : d.prozent >= 80 ? "WARNUNG" : "OK";
+                                    return [
+                                        "--------------------------------",
+                                        "Status: " + status,
+                                        "Reststückzahl: " + Math.round(d.rest).toLocaleString(),
+                                        "Aktueller Istwert: " + d.ist.toLocaleString(),
+                                        "--------------------------------",
+                                        "Verbrauch: " + Math.round(d.prozent) + "%",
+                                        "Nächstes Ziel: " + d.ziel.toLocaleString(),
+                                        "Wartungspaket: " + d.pkg
+                                    ];
+                                }
+                            }
+                        },
+                        datalabels: { anchor: 'end', align: 'top', rotation: -90, font: { weight: 'bold' }, formatter: Math.round }
+                    },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+                        x: { grid: { display: false } }
+                    }
                 }
             });
+        }
+
+        async function changeKlick(id, val) {
+            const current = state.clickCounts[id] || 0;
+            const newVal = Math.max(0, Math.min(FAHRPLAN.length - 1, current + val));
+            await db.ref(`maintenanceStateUnotron/clickCounts/${id}`).set(newVal);
         }
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -201,7 +216,10 @@
             try { await auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value); closeModal('authModal'); }
             catch(e) { alert("Login fehlgeschlagen"); }
         }
-        auth.onAuthStateChanged(user => { document.getElementById('authBtn').innerText = user ? "Logout" : "🔑 Login"; updateUI(); });
+        auth.onAuthStateChanged(user => { 
+            document.getElementById('authBtn').innerText = user ? "Logout" : "🔑 Login"; 
+            updateUI(); 
+        });
     </script>
 </body>
 </html>
