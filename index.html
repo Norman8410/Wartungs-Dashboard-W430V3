@@ -2,21 +2,16 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Unotron Wartung - Bosch V1.1</title>
+    <title>Unotron Wartung - Prozentual V1.4</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    
     <style>
-        :root { 
-            --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-light-blue: #00b5e2; 
-            --bosch-green: #008a4f; --bosch-gray: #eff1f2;
-        }
+        :root { --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-light-blue: #00b5e2; --bosch-green: #008a4f; --bosch-gray: #eff1f2; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bosch-gray); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Navigation Drawer */
         .nav-drawer { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.3); transition: 0.3s ease-in-out; z-index: 3000; padding-top: 20px; }
         .nav-drawer.open { left: 0; }
         .nav-item { padding: 15px 25px; display: flex; align-items: center; color: #404040; text-decoration: none; font-weight: 600; border-bottom: 1px solid #f0f0f0; transition: 0.2s; cursor: pointer; }
@@ -35,12 +30,12 @@
         .sidebar { flex: 1.5; background: white; border-top: 4px solid var(--bosch-light-blue); overflow-y: auto; padding: 10px; }
 
         .control-row { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; border-left: 8px solid #ccc; margin-bottom: 5px; gap: 8px; }
-        .nav-btn { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: white; font-weight: bold; border-radius: 2px; font-size: 12px; }
+        .nav-btn { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: white; font-weight: bold; border-radius: 2px; font-size: 11px; }
         .btn-wp { background: var(--bosch-red); color: white; border: none; }
         .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
         
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 4000; }
-        .modal-box { background: white; padding: 30px; border-top: 8px solid var(--bosch-red); width: 400px; text-align: center; }
+        .modal-box { background: white; padding: 30px; border-top: 8px solid var(--bosch-red); width: 350px; text-align: center; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; box-sizing: border-box; }
     </style>
 </head>
@@ -49,18 +44,18 @@
     <div id="drawerOverlay" class="overlay" onclick="toggleMenu()"></div>
     <div id="navDrawer" class="nav-drawer">
         <div style="padding: 20px; border-bottom: 2px solid #eee;"><b>PROJEKTE</b></div>
-        <a href="https://norman8410.github.io/Bosch-Wartung-Agie/" class="nav-item">⚡ Agie Wartung</a>
-        <a href="https://norman8410.github.io/Bosch-Wartung-HE/" class="nav-item">⚙️ HE Wartung</a>
-        <a href="#" class="nav-item active">🟦 Unotron Wartung</a>
+        <a href="https://norman8410.github.io/Bosch-Wartung-Agie/" class="nav-item">⚡ Agie</a>
+        <a href="https://norman8410.github.io/Bosch-Wartung-HE/" class="nav-item">⚙️ HE</a>
+        <a href="#" class="nav-item active">🟦 Unotron</a>
     </div>
 
     <div class="top-bar">
         <span class="menu-btn" onclick="toggleMenu()">☰</span>
-        <div style="font-size: 19px; font-weight: 600;">Wartungsintervalle Unotron</div>
+        <div style="font-size: 18px; font-weight: 600;">Unotron Wartung</div>
     </div>
 
     <div class="header">
-        <div class="bosch-text">BOSCH <span style="color:#525f6b; font-size:14px;">UNOTRON V1.1</span></div>
+        <div class="bosch-text">BOSCH <span style="color:#525f6b; font-size:14px;">UNOTRON</span></div>
         <button id="authBtn" class="nav-btn" onclick="openModal('authModal')">🔑 Login</button>
     </div>
 
@@ -69,16 +64,7 @@
         <div class="sidebar" id="machineList"></div>
     </div>
 
-    <div id="authModal" class="modal">
-        <div class="modal-box">
-            <h3>Admin Login</h3>
-            <input type="email" id="email" placeholder="E-Mail">
-            <input type="password" id="pass" placeholder="Passwort">
-            <br><br>
-            <button class="nav-btn" style="width:100%; background:var(--bosch-blue); color:white;" onclick="login()">Anmelden</button>
-            <p onclick="closeModal('authModal')" style="cursor:pointer; font-size:12px; color:gray; margin-top:10px;">Abbrechen</p>
-        </div>
-    </div>
+    <div id="authModal" class="modal"><div class="modal-box"><h3>Login</h3><input type="email" id="email" placeholder="E-Mail"><input type="password" id="pass" placeholder="Passwort"><br><br><button class="nav-btn" style="width:100%; background:var(--bosch-blue); color:white;" onclick="login()">Anmelden</button></div></div>
 
     <script>
         const firebaseConfig = {
@@ -90,17 +76,32 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database(), auth = firebase.auth();
 
-        // Konfiguration der Pakete nach Vorgabe
-        const CONFIG = [
-            { id: "P1", interval: 8000, start: 2000 },
-            { id: "P2", interval: 16000, start: 2000 },
-            { id: "P3", interval: 26000, start: 4000 },
-            { id: "P6", interval: 52000, start: 28000 },
-            { id: "P5", interval: 104000, start: 14000 },
-            { id: "P7", interval: 104000, start: 520000 }
+        // FAHRPLAN AUS CSV
+        const FAHRPLAN = [
+            { klick: 0, ziel: 2000, pkg: "P1, P2" },
+            { klick: 1, ziel: 4000, pkg: "P3" },
+            { klick: 2, ziel: 10000, pkg: "P1" },
+            { klick: 3, ziel: 14000, pkg: "P5" },
+            { klick: 4, ziel: 18000, pkg: "P1, P2" },
+            { klick: 5, ziel: 26000, pkg: "P1" },
+            { klick: 6, ziel: 28000, pkg: "P6, P7" },
+            { klick: 7, ziel: 30000, pkg: "P3" },
+            { klick: 8, ziel: 34000, pkg: "P1, P2" },
+            { klick: 9, ziel: 42000, pkg: "P1" },
+            { klick: 10, ziel: 50000, pkg: "P1, P2" },
+            { klick: 11, ziel: 56000, pkg: "P3" },
+            { klick: 12, ziel: 58000, pkg: "P1" },
+            { klick: 13, ziel: 66000, pkg: "P1, P2" },
+            { klick: 14, ziel: 74000, pkg: "P1" },
+            { klick: 15, ziel: 80000, pkg: "P6" },
+            { klick: 16, ziel: 82000, pkg: "P3" },
+            { klick: 17, ziel: 86000, pkg: "P1, P2" },
+            { klick: 18, ziel: 90000, pkg: "P1" },
+            { klick: 19, ziel: 98000, pkg: "P1, P2" },
+            { klick: 20, ziel: 104000, pkg: "WP" }
         ];
 
-        let state = { cloudRawData: [], extraCycles: {}, offsets: {} };
+        let state = { cloudRawData: [], clickCounts: {}, offsets: {} }; 
         let chart = null;
 
         function toggleMenu() {
@@ -108,11 +109,10 @@
             document.getElementById('drawerOverlay').style.display = isOpen ? 'block' : 'none';
         }
 
-        // Daten aus Firebase laden
         db.ref('maintenanceStateUnotron').on('value', snap => {
             const val = snap.val() || {};
             state.cloudRawData = val.cloudRawData || [];
-            state.extraCycles = val.extraCycles || {};
+            state.clickCounts = val.clickCounts || {}; 
             state.offsets = val.offsets || {};
             updateUI();
         });
@@ -120,25 +120,25 @@
         function updateUI() {
             const data = state.cloudRawData.map(item => {
                 const id = item.STATIONNO;
-                const ist = (parseInt(item['COUNT(*)']) || 0) - (state.offsets[id] || 0);
-                const cycles = state.extraCycles[id] || 0;
-
-                // Aktives Paket bestimmen
-                let activePkg = CONFIG[0];
-                for (let pkg of CONFIG) {
-                    if (ist >= pkg.start) activePkg = pkg;
-                }
-
-                // Formel: (Startwert + (Zyklen * Intervall)) - Iststückzahl
-                let rest = (activePkg.start + (cycles * activePkg.interval)) - ist;
+                const totalIst = parseInt(item['COUNT(*)']) || 0;
+                const offset = state.offsets[id] || 0;
+                const relIst = totalIst - offset;
                 
-                // Farblogik
-                let color = "#008a4f"; // Grün
-                if (rest <= 0) color = "#8b0000";       // Dunkelrot
-                else if (rest < 500) color = "#ff4d4d";  // Rot
-                else if (rest < 1500) color = "#ffa500"; // Orange
+                const klick = state.clickCounts[id] || 0;
+                const stufe = FAHRPLAN.find(f => f.klick === klick) || FAHRPLAN[FAHRPLAN.length-1];
+                const prev = klick > 0 ? FAHRPLAN.find(f => f.klick === klick - 1).ziel : 0;
 
-                return { id, rest, color, ist, cycles, pkg: activePkg.id };
+                const windowSize = stufe.ziel - prev;
+                const used = relIst - prev;
+                const prozent = (used / windowSize) * 100;
+                const rest = stufe.ziel - relIst;
+                
+                let color = "#008a4f"; // Grün
+                if (prozent >= 100) color = "#8b0000"; // Dunkelrot
+                else if (prozent >= 95) color = "#d50000"; // Bosch-Rot
+                else if (prozent >= 80) color = "#ffa500"; // Orange
+
+                return { id, rest, color, ist: relIst, pkg: stufe.pkg, klick, prozent: Math.max(0, prozent) };
             }).sort((a,b) => a.rest - b.rest);
 
             const list = document.getElementById('machineList');
@@ -152,18 +152,30 @@
                     </div>
                     <div style="flex:1; text-align:right; font-weight:bold; font-size:15px; margin-right:10px;">
                         ${Math.round(d.rest).toLocaleString()}
+                        <div style="font-size:10px; font-weight:normal; color:gray;">${Math.round(d.prozent)}%</div>
                     </div>
                     <div style="display:flex; gap:3px;">
-                        <button class="nav-btn" ${isLogged ? '' : 'disabled'} onclick="changeCycle('${d.id}', -1)">-</button>
-                        <button class="nav-btn" ${isLogged && d.rest <= 500 ? '' : 'disabled'} 
-                                title="${d.rest > 500 ? 'Sperre: Erst ab Restwert <= 500' : ''}"
-                                onclick="changeCycle('${d.id}', 1)">+</button>
+                        <button class="nav-btn" ${isLogged && d.klick > 0 ? '' : 'disabled'} onclick="changeKlick('${d.id}', -1)">-</button>
+                        <button class="nav-btn" ${isLogged && d.prozent >= 80 ? '' : 'disabled'} onclick="changeKlick('${d.id}', 1)">+</button>
                         <button class="nav-btn btn-wp" ${isLogged && d.ist >= 104000 ? '' : 'disabled'} onclick="wpReset('${d.id}')">WP</button>
                     </div>
                 </div>
             `).join('');
-
             renderChart(data);
+        }
+
+        async function changeKlick(id, val) {
+            const current = state.clickCounts[id] || 0;
+            const newVal = Math.max(0, Math.min(FAHRPLAN.length - 1, current + val));
+            await db.ref(`maintenanceStateUnotron/clickCounts/${id}`).set(newVal);
+        }
+
+        async function wpReset(id) {
+            if(confirm("Full WP Reset für U" + id + "?")) {
+                const newOffset = (state.offsets[id] || 0) + 104000;
+                await db.ref(`maintenanceStateUnotron/offsets/${id}`).set(newOffset);
+                await db.ref(`maintenanceStateUnotron/clickCounts/${id}`).set(0);
+            }
         }
 
         function renderChart(data) {
@@ -178,55 +190,18 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: (ctx) => {
-                                    const d = data[ctx.dataIndex];
-                                    return ["Rest: " + Math.round(d.rest).toLocaleString(), "Ist: " + d.ist.toLocaleString(), "Paket: " + d.pkg];
-                                }
-                            }
-                        },
-                        datalabels: { anchor: 'end', align: 'top', rotation: -90, font: { weight: 'bold' }, formatter: Math.round }
-                    }
+                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', rotation: -90, font: { weight: 'bold' }, formatter: Math.round } }
                 }
             });
         }
 
-        async function changeCycle(id, val) {
-            const current = state.extraCycles[id] || 0;
-            await db.ref(`maintenanceStateUnotron/extraCycles/${id}`).set(current + val);
-        }
-
-        async function wpReset(id) {
-            if(confirm("Full WP Reset für U" + id + "? (Zähler wird um 104.000 reduziert)")) {
-                const up = {};
-                up[`maintenanceStateUnotron/offsets/${id}`] = (state.offsets[id] || 0) + 104000;
-                up[`maintenanceStateUnotron/extraCycles/${id}`] = 0;
-                await db.ref().update(up);
-            }
-        }
-
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        
         async function login() {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('pass').value;
-            try { 
-                await auth.signInWithEmailAndPassword(email, pass); 
-                closeModal('authModal'); 
-            } catch(e) { 
-                alert("Login fehlgeschlagen: " + e.message); 
-            }
+            try { await auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value); closeModal('authModal'); }
+            catch(e) { alert("Login fehlgeschlagen"); }
         }
-
-        auth.onAuthStateChanged(user => {
-            document.getElementById('authBtn').innerText = user ? "Abmelden" : "🔑 Login";
-            updateUI();
-        });
+        auth.onAuthStateChanged(user => { document.getElementById('authBtn').innerText = user ? "Logout" : "🔑 Login"; updateUI(); });
     </script>
 </body>
 </html>
