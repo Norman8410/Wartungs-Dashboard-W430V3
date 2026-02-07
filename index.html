@@ -143,21 +143,20 @@
                 const intervalSize = target.total - prevTotal;
                 const rest = target.total - ist;
                 
-                // Prozentualer Restwert im aktuellen Intervall
                 const restPercent = (rest / intervalSize) * 100;
+                const progressInInterval = 100 - restPercent;
 
-                // Deine neuen Regeln:
-                let statusColor = "#008a4f"; // Grün
-                if (rest <= 0) statusColor = "#8b0000"; // Dunkelrot
-                else if (restPercent <= 3.125) statusColor = "#d50000"; // Rot
-                else if (restPercent <= 12.5) statusColor = "#ffa500"; // Gelb
+                let statusColor = "#008a4f";
+                if (rest <= 0) statusColor = "#8b0000";
+                else if (restPercent <= 3.125) statusColor = "#d50000";
+                else if (restPercent <= 12.5) statusColor = "#ffa500";
                 
-                return { id, rest, color: statusColor, ist, cIdx, pkg: target.pkg, target: target.total, restPercent };
+                return { id, rest, color: statusColor, ist, cIdx, pkg: target.pkg, target: target.total, restPercent, progressInInterval, intervalSize };
             }).sort((a, b) => a.rest - b.rest);
 
             const list = document.getElementById('machineList'), logged = !!auth.currentUser;
             list.innerHTML = data.map(d => `
-                <div class="control-row ${d.rest <= 0 ? 'pulse' : ''}" style="border-left: 8px solid ${d.color};">
+                <div class="control-row ${d.rest <= 0 ? 'critical-pulse' : ''}" style="border-left: 8px solid ${d.color};">
                     <div style="flex: 2;"><b>UNO-${d.id}</b><br><small>${d.pkg} (@${d.target.toLocaleString()})</small></div>
                     <div style="flex: 1; text-align: right; font-weight: bold; color: ${d.color};">${d.rest.toLocaleString()}</div>
                     <div style="display: ${logged ? 'flex' : 'none'}; gap: 5px; align-items: center; margin-left: 10px;">
@@ -186,17 +185,66 @@
             const ctx = document.getElementById('mainChart').getContext('2d');
             if(chart) chart.destroy();
             chart = new Chart(ctx, {
-                type: 'bar', plugins: [ChartDataLabels],
+                type: 'bar',
+                plugins: [ChartDataLabels],
                 data: {
-                    labels: data.map(d => "U" + d.id),
-                    datasets: [{ data: data.map(d => d.rest), backgroundColor: data.map(d => d.color) }]
+                    labels: data.map(d => "UNO-" + d.id),
+                    datasets: [{ 
+                        data: data.map(d => d.rest), 
+                        backgroundColor: data.map(d => d.color),
+                        // Metadaten für den Tooltip mitschicken
+                        istWerte: data.map(d => d.ist),
+                        zielWerte: data.map(d => d.target),
+                        pakete: data.map(d => d.pkg),
+                        fortschritt: data.map(d => d.progressInInterval.toFixed(1))
+                    }]
                 },
                 options: { 
-                    responsive: true, maintainAspectRatio: false, 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
                     plugins: { 
                         legend: { display: false },
-                        datalabels: { anchor: 'end', align: 'top', formatter: v => v.toLocaleString(), font: { weight: 'bold' } }
-                    } 
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#003a6c',
+                            titleFont: { size: 16, weight: 'bold' },
+                            bodyColor: '#333',
+                            bodyFont: { size: 13 },
+                            borderColor: '#ccc',
+                            borderWidth: 1,
+                            padding: 15,
+                            displayColors: false,
+                            callbacks: {
+                                title: (items) => items[0].label,
+                                label: (item) => {
+                                    const ds = item.dataset;
+                                    const idx = item.dataIndex;
+                                    return [
+                                        `📦 Paket: ${ds.pakete[idx]}`,
+                                        `--------------------------`,
+                                        `📊 Ist-Stand: ${ds.istWerte[idx].toLocaleString()} Teile`,
+                                        `🎯 Ziel-Wert: ${ds.zielWerte[idx].toLocaleString()} Teile`,
+                                        `⏳ Restlauf:  ${item.raw.toLocaleString()} Teile`,
+                                        `📈 Status:    ${ds.fortschritt[idx]}% des Intervalls erledigt`
+                                    ];
+                                }
+                            }
+                        },
+                        datalabels: { 
+                            anchor: 'end', 
+                            align: 'top', 
+                            offset: 10,
+                            rotation: -90, // 90 Grad Drehung
+                            formatter: v => v.toLocaleString(), 
+                            font: { weight: 'bold', size: 11 } 
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            title: { display: true, text: 'Reststückzahl' }
+                        }
+                    }
                 }
             });
         }
