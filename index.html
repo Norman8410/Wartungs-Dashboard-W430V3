@@ -143,6 +143,10 @@
                 const intervalSize = target.total - prevTotal;
                 const rest = target.total - ist;
                 
+                // Berechnung der kumulierten Gesamtstückzahl (falls cIdx > 18, also nach WP Reset)
+                const fullCycles = Math.floor(cIdx / 19);
+                const currentTotalCount = (fullCycles * 104000) + ist;
+
                 const restPercent = (rest / intervalSize) * 100;
                 const progressInInterval = 100 - restPercent;
 
@@ -151,13 +155,13 @@
                 else if (restPercent <= 3.125) statusColor = "#d50000";
                 else if (restPercent <= 12.5) statusColor = "#ffa500";
                 
-                return { id, rest, color: statusColor, ist, cIdx, pkg: target.pkg, target: target.total, restPercent, progressInInterval, intervalSize };
+                return { id, rest, color: statusColor, ist, cIdx, pkg: target.pkg, target: target.total, restPercent, progressInInterval, intervalSize, currentTotalCount };
             }).sort((a, b) => a.rest - b.rest);
 
             const list = document.getElementById('machineList'), logged = !!auth.currentUser;
             list.innerHTML = data.map(d => `
                 <div class="control-row ${d.rest <= 0 ? 'critical-pulse' : ''}" style="border-left: 8px solid ${d.color};">
-                    <div style="flex: 2;"><b>UNO-${d.id}</b><br><small>${d.pkg} (@${d.target.toLocaleString()})</small></div>
+                    <div style="flex: 2;"><b>UNO-${d.id}</b><br><small>${d.pkg} (@${d.currentTotalCount.toLocaleString()})</small></div>
                     <div style="flex: 1; text-align: right; font-weight: bold; color: ${d.color};">${d.rest.toLocaleString()}</div>
                     <div style="display: ${logged ? 'flex' : 'none'}; gap: 5px; align-items: center; margin-left: 10px;">
                         <button class="nav-btn btn-wp" title="WP Reset" onclick="setWP('${d.id}')">WP</button>
@@ -192,8 +196,8 @@
                     datasets: [{ 
                         data: data.map(d => d.rest), 
                         backgroundColor: data.map(d => d.color),
-                        // Metadaten für den Tooltip mitschicken
                         istWerte: data.map(d => d.ist),
+                        gesamtWerte: data.map(d => d.currentTotalCount),
                         zielWerte: data.map(d => d.target),
                         pakete: data.map(d => d.pkg),
                         fortschritt: data.map(d => d.progressInInterval.toFixed(1))
@@ -222,10 +226,10 @@
                                     return [
                                         `📦 Paket: ${ds.pakete[idx]}`,
                                         `--------------------------`,
-                                        `📊 Ist-Stand: ${ds.istWerte[idx].toLocaleString()} Teile`,
-                                        `🎯 Ziel-Wert: ${ds.zielWerte[idx].toLocaleString()} Teile`,
-                                        `⏳ Restlauf:  ${item.raw.toLocaleString()} Teile`,
-                                        `📈 Status:    ${ds.fortschritt[idx]}% des Intervalls erledigt`
+                                        `🏭 Gesamt-Ist: ${ds.gesamtWerte[idx].toLocaleString()} Teile`,
+                                        `🎯 Ziel-Stufe: ${ds.zielWerte[idx].toLocaleString()} Teile`,
+                                        `⏳ Restlauf:   ${item.raw.toLocaleString()} Teile`,
+                                        `📈 Status:     ${ds.fortschritt[idx]}% des Intervalls erledigt`
                                     ];
                                 }
                             }
@@ -234,7 +238,7 @@
                             anchor: 'end', 
                             align: 'top', 
                             offset: 10,
-                            rotation: -90, // 90 Grad Drehung
+                            rotation: -90,
                             formatter: v => v.toLocaleString(), 
                             font: { weight: 'bold', size: 11 } 
                         }
