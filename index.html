@@ -19,7 +19,7 @@
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; }
         .column { background: white; border-top: 5px solid var(--bosch-blue); display: flex; flex-direction: column; overflow: hidden; border-radius: 4px; }
         
-        /* --- Optimierte Header Links --- */
+        /* Links */
         .col-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
         .col-header a { text-decoration: none; color: var(--bosch-blue); transition: color 0.2s; display: flex; align-items: center; gap: 5px; }
         .col-header a:hover { color: var(--bosch-red); text-decoration: underline; }
@@ -27,25 +27,22 @@
         .time-badge { font-size: 0.8em; color: var(--bosch-red); background: white; padding: 2px 8px; border-radius: 12px; border: 1px solid #ffcccc; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .machine-list { flex: 1; overflow-y: auto; padding: 10px; }
 
-        /* --- Karten-Layout & Hintergrundfarben --- */
-        .card { padding: 12px; margin-bottom: 10px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); transition: transform 0.1s; }
+        /* Karten-Design (Ohne Animationen für max. Performance) */
+        .card { padding: 12px; margin-bottom: 10px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
         
-        /* Status Farben */
+        /* Klare Farben statt Blinken */
         .card.warning { background-color: #fff3cd; border-left: 8px solid #ffc107; color: #856404; }
         .card.critical { background-color: #f8d7da; border-left: 8px solid #dc3545; color: #721c24; }
-        .card.overdue { background-color: #f5b7b1; border-left: 8px solid #b03a2e; color: #641e16; }
+        /* Overdue: Dunkleres Rot, sehr auffällig, aber statisch */
+        .card.overdue { background-color: #fadbd8; border-left: 8px solid #922b21; color: #641e16; font-weight: bold; }
         
-        /* In Progress (Blau) gewinnt immer durch !important */
-        .card.in-progress { background-color: #d1ecf1 !important; border-left: 8px dashed #0c5460 !important; color: #0c5460; }
-        
-        @keyframes blink-red { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .blink { animation: blink-red 1s infinite; }
+        .card.in-progress { background-color: #d1ecf1 !important; border-left: 8px dashed #0c5460 !important; color: #0c5460; font-weight: normal; }
 
         .card-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
         .m-id { font-weight: bold; font-size: 1.2em; } 
         .m-rest { font-weight: bold; font-size: 1.2em; } 
         .m-paket { font-size: 0.9em; font-weight: bold; text-transform: uppercase; } 
-        .m-time { font-size: 0.8em; opacity: 0.8; margin-top: 4px; }
+        .m-time { font-size: 0.8em; opacity: 0.8; margin-top: 4px; font-weight: normal; }
         
         select { width: 100%; padding: 6px; border: 1px solid rgba(0,0,0,0.2); border-radius: 4px; background: white; cursor: pointer; }
         
@@ -216,15 +213,29 @@
         document.getElementById(listId).innerHTML = data.map(m => {
             const ass = state.assignments[m.key] || "";
             const isW = ass !== "";
+            
             let cls = 'warning';
-            // Prio-Logik:
-            if(m.rest <= 0) cls = isW ? 'overdue' : 'blink overdue';
-            else if(m.rest < m.crit) cls = 'critical';
+            let icon = ''; // Icon statt Blinken
+
+            if(m.rest <= 0) {
+                if(isW) {
+                    cls = 'overdue'; // Wird durch .in-progress überschrieben, aber als Basis OK
+                } else {
+                    cls = 'overdue';
+                    icon = '⚠️ '; // Warn-Symbol für Aufmerksamkeit ohne CPU-Last
+                }
+            } else if(m.rest < m.crit) {
+                cls = 'critical';
+            }
             
             return `
             <div class="card ${cls} ${isW?'in-progress':''}">
                 <div class="card-info">
-                    <div><div class="m-id">${m.id}</div><div class="m-paket">${m.pkg}</div><div class="m-time">⏱ ${m.dur} Min.</div></div>
+                    <div>
+                        <div class="m-id">${m.id}</div>
+                        <div class="m-paket" style="${icon ? 'color:var(--bosch-dark-red)' : ''}">${icon}${m.pkg}</div>
+                        <div class="m-time">⏱ ${m.dur} Min.</div>
+                    </div>
                     <div class="m-rest">${m.rest.toLocaleString()}</div>
                 </div>
                 <select ${!auth.currentUser?'disabled':''} onchange="db.ref('dashboardAssignments/${m.key}').set(this.value)">
