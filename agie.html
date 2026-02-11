@@ -19,7 +19,7 @@
             margin: 0;
             display: flex;
             flex-direction: column;
-            height: 100vh; /* Wichtig: body füllt den gesamten Viewport */
+            height: 100vh;
             overflow: hidden; /* Verhindert, dass der body selbst scrollt, da wir interne Bereiche scrollen */
         }
         .top-bar {
@@ -64,11 +64,9 @@
             overflow-y: auto; /* Wichtig: Ermöglicht vertikales Scrollen in der Sidebar */
             padding: 10px;
             border-radius: 4px;
-            /* box-sizing: border-box; */ /* Oft hilfreich bei Padding, kann aber hier weggelassen werden, da overflow:auto */
             display: flex; /* Machen wir die Sidebar auch zum Flex-Container */
             flex-direction: column; /* Damit die Inhalte untereinander angeordnet werden */
         }
-        /* Eventuell noch die Anpassung für die einzelnen Reihen im Sidebar */
         .row {
             display: flex;
             align-items: center;
@@ -79,14 +77,16 @@
             margin-bottom: 5px;
             flex-shrink: 0; /* Verhindert, dass eine Zeile schrumpft und so abgeschnitten wird */
         }
-    
+
         .btn-cycle { padding: 8px 12px; cursor: pointer; border: 1px solid #ccc; background: white; font-weight: bold; border-radius: 2px; }
         .btn-cycle:hover { background: #f0f0f0; }
+        .btn-cycle:disabled { opacity: 0.5; cursor: not-allowed; } /* Stil für deaktivierte Buttons */
+
         .btn-reset-auto { background: var(--bosch-red); color: white; border: none; padding: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
-    
+
         @keyframes blink-red { 0% { background: #fff; } 50% { background: #ffcccc; } 100% { background: #fff; } }
         .blink { animation: blink-red 1s infinite; }
-    
+
         /* MEDIA QUERIES für Handys */
         @media (max-width: 768px) { /* Beispiel-Breakpoint für Handys */
             .main-layout {
@@ -104,7 +104,6 @@
             }
             .sidebar {
                 height: 50vh; /* Beispiel: Sidebar nimmt 50% der Viewport-Höhe ein */
-                /* Alternativ: max-height: calc(100vh - 45px - 60px - 10px); */ /* Viewport abzüglich Top-Bar, Header, Padding */
                 overflow-y: auto; /* Scrollbar für die Sidebar auf Handys */
             }
         }
@@ -124,14 +123,12 @@
 </div>
 
 <script>
-    let chart = null, currentUser = null, inactivityTimer;
-    let agieConfig = null; // <-- Neu
-
     const firebaseConfig = { apiKey: "AIzaSyD6xGCtU-felOyO_BRsFnVlB4yhC46FgYg", authDomain: "bosch-agie-wartung.firebaseapp.com", databaseURL: "https://bosch-agie-wartung-default-rtdb.europe-west1.firebasedatabase.app", projectId: "bosch-agie-wartung" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(), auth = firebase.auth();
-    
+
     let chart = null, currentUser = null, inactivityTimer;
+    let agieConfig = null; // Wird von Firebase geladen
 
     function resetTimer() {
         clearTimeout(inactivityTimer);
@@ -144,50 +141,81 @@
     db.ref('maintenanceConfig/agie').on('value', configSnap => {
         agieConfig = configSnap.val();
         if (!agieConfig) {
-            console.error("Agie Konfiguration konnte nicht geladen werden!");
-            // Optional: Fallback-Werte setzen oder Fehler anzeigen
+            console.error("Agie Konfiguration konnte nicht geladen werden! Sicherstellen, dass 'maintenanceConfig/agie' in Firebase existiert.");
+            document.getElementById('machineList').innerHTML = "Fehler beim Laden der Konfiguration.";
             return;
         }
-        
+
         // Erst wenn die Konfiguration geladen ist, die Maschinendaten laden
         db.ref('maintenanceState').on('value', snap => {
             const val = snap.val() || {}, raw = val.cloudRawData || [], offsets = val.agieOffsets || {}, cycles = val.extraCycles || {};
-            
-            // ... (der Rest des Codes bleibt hier gleich, wird aber gleich angepasst)
-            
+
             const data = raw.map(item => {
                 const id = item.StationNo || item.STATIONNO;
                 if(!id) return null;
-                const tot = parseInt(item.Parts) || 0;
-                const off = offsets[id] || 0;
-                const ist = tot - off;
-                const cyc = cycles[id] || 0;
-                
-                // === ANPASSUNG HIER UNTEN ===
+                const tot = parseInt(item.Parts) || 0; // Gesamtzählerstand der Maschine
+                const off = offsets[id] || 0;        // Offset für den aktuellen Zyklus
+                const ist = tot - off;               // Stück seit letzter Wartung (für aktuellen Zyklus)
+                const cyc = cycles[id] || 0;         // Aktueller extraCycle
+
+                // Wenn resetThreshold erreicht -> Reset-Modus
                 const needsReset = ist >= agieConfig.resetThreshold;
-                const target = needsReset ? agieConfig.resetThreshold : (agieConfig.intervalStep + (cyc * agieConfig.intervalStep));
+                const currentCycleThreshold = agieConfig.intervalStep + (cyc * agieConfig.intervalStep);
+                
+                // Der 'target' ist der nächste Fälligkeitspunkt der Wartung.
+                // Wenn needsReset, dann ist der target der resetThreshold.
+                // Ansonsten ist es der aktuelle cycleThreshold.
+                const target = needsReset ? agieConfig.resetThreshold : currentCycleThreshold;
+                
                 const pkg = needsReset ? "AUSTAUSCH ERFORDERLICH" : "Offen: " + (agieConfig.intervals[cyc] ? agieConfig.intervals[cyc].packages.join('/') : "Folgepaket");
-                const rest = target - ist;
-    
-                return { id, rest, ist, tot, cyc, pkg, needsReset, color: getC(rest, needsReset) };
+                const rest = target - ist; // Reststücke bis zum nächsten Wartungspunkt
+
+                return { id, rest, ist, tot, cyc, pkg, needsReset, color: getC(rest, needsReset, currentCycleThreshold) };
             }).filter(d => d !== null).sort((a,b) => a.rest - b.rest);
-    
+
             renderList(data);
             renderChart(data);
         });
     });
 
-    function getC(r, reset) {
-        if (!agieConfig) return "#ccc"; // Fallback, falls Konfig nicht geladen
-    
-        if(reset || r <= 0) return "#8b0000"; // Überfällig / Reset
-        if(r <= agieConfig.criticalThreshold) return "#d50000"; // Kritisch
-        if(r <= agieConfig.warningThreshold) return "#ffa500"; // Warnung
-        return "#008a4f"; // Normal (grün)
+    // getC Funktion verwendet jetzt Prozentwerte vom agieConfig.intervalStep
+    function getC(r, reset, currentCycleThreshold) {
+        if (!agieConfig || !agieConfig.intervalStep) return "#ccc"; // Fallback, falls Konfig nicht geladen
+
+        if(reset || r <= 0) return "#8b0000"; // Überfällig / Reset -> Dunkelrot
+        
+        // Berechne den Prozentsatz des verbleibenden Intervalls
+        // Wenn currentCycleThreshold kleiner als intervalStep ist (z.B. erster Zyklus),
+        // nehmen wir intervalStep als Basis für die Prozentberechnung.
+        const effectiveInterval = agieConfig.intervalStep;
+        const remainingPercent = (r / effectiveInterval) * 100;
+
+        if(remainingPercent <= agieConfig.criticalThresholdPercent) return "#d50000"; // Rot
+        if(remainingPercent <= agieConfig.warningThresholdPercent) return "#ffa500"; // Orange/Gelb
+        return "#008a4f"; // Grün
     }
 
     function renderList(data) {
-        document.getElementById('machineList').innerHTML = data.map(d => `
+        document.getElementById('machineList').innerHTML = data.map(d => {
+            // Bestimme den aktuellen Zyklus-Schwellenwert für die Prozentberechnung
+            const currentCycleThresholdValue = agieConfig.intervalStep; // Basis ist immer das Intervall selbst
+
+            // Berechne den aktuellen Rest als Prozent vom aktuellen Intervall
+            const restPercent = (d.rest / currentCycleThresholdValue) * 100;
+
+            // Logik für Deaktivierung des '+' Buttons:
+            // 1. Wenn die Maschine den Reset-Schwellenwert erreicht hat (needsReset).
+            // 2. Wenn der aktuelle rest über dem WarningThresholdPercent liegt (d.h. noch "viel" Rest ist).
+            // 3. Wenn der maximale Zyklus erreicht ist (um zu verhindern, dass agieConfig.intervals[cyc+1] fehlschlägt).
+            const disablePlus = d.needsReset || 
+                                (agieConfig && restPercent > agieConfig.warningThresholdPercent) ||
+                                (d.cyc >= agieConfig.intervals.length - 1); // -1, weil cyc 0-indexed ist
+
+            // Logik für Deaktivierung des '-' Buttons:
+            // Wenn der extraCycle 0 ist, kann er nicht weiter reduziert werden.
+            const disableMinus = d.cyc === 0;
+
+            return `
             <div class="row ${d.rest <= 0 ? 'blink' : ''}" style="border-left-color:${d.color}">
                 <div style="flex:1.5">
                     <b>A-${d.id}</b><br>
@@ -195,46 +223,126 @@
                 </div>
                 <div style="flex:1; text-align:right;"><b>${d.rest.toLocaleString()}</b></div>
                 <div style="display:${currentUser ? 'flex' : 'none'}; gap:5px; margin-left:10px; flex-direction:column;">
-                    ${d.needsReset ? 
+                    ${d.needsReset ?
                         `<button class="btn-reset-auto" onclick="autoReset('${d.id}', ${d.tot})">Austausch bestätigen</button>` :
                         `<div style="display:flex; gap:5px; align-items:center;">
-                            <button class="btn-cycle" onclick="changeC('${d.id}', -1)">-</button>
+                            <button class="btn-cycle" onclick="changeC('${d.id}', -1, ${d.ist}, ${d.tot})" ${disableMinus ? 'disabled' : ''}>-</button>
                             <span style="font-weight:bold; min-width:20px; text-align:center">${d.cyc}</span>
-                            <button class="btn-cycle" onclick="changeC('${d.id}', 1)">+</button>
+                            <button class="btn-cycle" onclick="changeC('${d.id}', 1, ${d.ist}, ${d.tot})" ${disablePlus ? 'disabled' : ''}>+</button>
                          </div>`
                     }
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
-    async function changeC(id, v) {
-        if(!currentUser) return;
-        const ref = db.ref(`maintenanceState/extraCycles/${id}`);
-        const snap = await ref.once('value');
-        const newVal = Math.max(0, (snap.val() || 0) + v);
+    async function changeC(id, v, currentIst, currentTotalParts) {
+        if(!currentUser) {
+            alert("Sie müssen angemeldet sein, um Wartungszyklen zu ändern.");
+            return;
+        }
+        if (!agieConfig) {
+            alert("Konfigurationsdaten für Agie sind noch nicht geladen. Bitte warten Sie einen Moment.");
+            return;
+        }
+
+        const cycleRef = db.ref(`maintenanceState/extraCycles/${id}`);
+        const offsetRef = db.ref(`maintenanceState/agieOffsets/${id}`);
         
-        // Einsteller-Backup Logik
-        const refAssign = db.ref(`dashboardAssignments/A${id}`);
-        const refBackup = db.ref(`maintenanceState/lastEinsteller/A${id}`);
-        if(v > 0) {
+        const oldCyc = (await cycleRef.once('value')).val() || 0;
+        const oldOffset = (await offsetRef.once('value')).val() || 0;
+
+        let newCyc = oldCyc + v;
+        let newOffset = oldOffset;
+
+        // --- Logik für den PLUS-Button (v === 1) -> Wartung abschließen ---
+        if (v === 1) {
+            // Berechne den Restwert in Prozent
+            const currentTarget = agieConfig.intervalStep + (oldCyc * agieConfig.intervalStep);
+            const currentRest = currentTarget - currentIst;
+            const restPercent = (currentRest / agieConfig.intervalStep) * 100;
+
+            if (restPercent > agieConfig.warningThresholdPercent) {
+                alert(`Die Wartung A-${id} kann noch nicht abgeschlossen werden, da noch ${currentRest.toLocaleString()} Stück übrig sind (${restPercent.toFixed(1)}%). Der '+' Button ist nur für anstehende Wartungen (${agieConfig.warningThresholdPercent}% Rest) vorgesehen.`);
+                return;
+            }
+            if (newCyc >= agieConfig.intervals.length) {
+                alert("Der maximale Wartungszyklus ist bereits erreicht. Bitte prüfen Sie, ob ein Austausch oder ein kompletter Reset fällig ist.");
+                return;
+            }
+
+            // Bestätigungsdialog, wenn die Wartung noch nicht überfällig ist
+            if (currentRest > 0 && !confirm(`Die Wartung A-${id} ist noch nicht überfällig (Rest: ${currentRest.toLocaleString()} Stück). Möchten Sie sie trotzdem abschließen und den Zyklus erhöhen?`)) {
+                return;
+            }
+            
+            // Offset anpassen: Der Offset wird um einen 'intervalStep' erhöht.
+            // Dies simuliert, dass die Maschine jetzt einen neuen Zyklus startet
+            // und der Zähler 'ist' wieder von vorne beginnt (relativ zum neuen Zyklus).
+            newOffset = oldOffset + agieConfig.intervalStep;
+
+            // Einsteller-Backup Logik bei Abschluss der Wartung
+            const refAssign = db.ref(`dashboardAssignments/A${id}`);
+            const refBackup = db.ref(`maintenanceState/lastEinsteller/A${id}`);
             const sA = await refAssign.once('value');
             if(sA.val()) await refBackup.set(sA.val());
-            await refAssign.set("");
-        } else {
-            const sB = await refBackup.once('value');
-            if(sB.val()) await refAssign.set(sB.val());
+            await refAssign.set(""); // Zuweisung entfernen, da Wartung abgeschlossen
+
+            // Log-Eintrag
+            await db.ref('auditLog').push({
+                Maschine: "A-" + id, Aktion: "ZYKLUS ERHÖHT", alter_Zyklus: oldCyc, neuer_Zyklus: newCyc, Zeit: new Date().toLocaleString(), User: currentUser.email
+            });
+
         }
-        await ref.set(newVal);
+        // --- Logik für den MINUS-Button (v === -1) -> Wartung zurücksetzen ---
+        else if (v === -1) {
+            if (newCyc < 0) {
+                alert("Der Zyklus kann nicht unter 0 reduziert werden.");
+                return;
+            }
+            if (!confirm(`Möchten Sie die letzte Wartung für A-${id} zurücksetzen (Zyklus von ${oldCyc} auf ${newCyc})? Dies wird auch eine eventuelle Zuweisung wiederherstellen.`)) {
+                return;
+            }
+            
+            // Offset anpassen: Der Offset wird um einen 'intervalStep' reduziert.
+            newOffset = Math.max(0, oldOffset - agieConfig.intervalStep); // Offset darf nicht negativ werden
+
+            // Einsteller-Wiederherstellung Logik
+            const refAssign = db.ref(`dashboardAssignments/A${id}`);
+            const refBackup = db.ref(`maintenanceState/lastEinsteller/A${id}`);
+            const sB = await refBackup.once('value');
+            if(sB.val()) await refAssign.set(sB.val()); // Zuweisung wiederherstellen
+
+            // Log-Eintrag
+            await db.ref('auditLog').push({
+                Maschine: "A-" + id, Aktion: "ZYKLUS REDUZIERT", alter_Zyklus: oldCyc, neuer_Zyklus: newCyc, Zeit: new Date().toLocaleString(), User: currentUser.email
+            });
+        } else {
+            return; // Ungültiger Wert für v
+        }
+        
+        // DB-Updates durchführen
+        await cycleRef.set(newCyc);
+        await offsetRef.set(newOffset);
     }
 
     async function autoReset(id, tot) {
-        if(!confirm(`Hiermit wird der Austausch für A-${id} bestätigt. Der Zähler wird zurückgesetzt.`)) return;
+        if(!currentUser) {
+            alert("Sie müssen angemeldet sein, um einen Austausch zu bestätigen.");
+            return;
+        }
+        if(!confirm(`Hiermit wird der Austausch für A-${id} bestätigt. Der Zähler wird zurückgesetzt und alle Wartungszyklen beginnen von Neuem.`)) return;
+        
+        // Den Offset auf den gesamten Zählerstand setzen, damit ist wieder 0 wird
         await db.ref(`maintenanceState/agieOffsets/${id}`).set(tot);
+        // extraCycles auf 0 zurücksetzen
         await db.ref(`maintenanceState/extraCycles/${id}`).set(0);
+        // Zugewiesenen Einsteller entfernen
         await db.ref(`dashboardAssignments/A${id}`).set("");
+        
         // Log-Eintrag
         await db.ref('auditLog').push({
-            Maschine: "A-" + id, Aktion: "KOMPLETT-AUSTAUSCH", Zeit: new Date().toLocaleString(), User: currentUser.email
+            Maschine: "A-" + id, Aktion: "KOMPLETT-AUSTAUSCH BESTÄTIGT", Zeit: new Date().toLocaleString(), User: currentUser.email
         });
     }
 
@@ -255,8 +363,12 @@
                         callbacks: {
                             label: function(context) {
                                 const d = data[context.dataIndex];
+                                // Den prozentualen Restwert im Tooltip anzeigen
+                                const currentCycleThresholdValue = agieConfig.intervalStep;
+                                const restPercent = (d.rest / currentCycleThresholdValue) * 100;
+                                
                                 return [
-                                    `Rest bis Klick: ${d.rest.toLocaleString()}`,
+                                    `Rest bis Klick: ${d.rest.toLocaleString()} (${restPercent.toFixed(1)}%)`,
                                     `Aktuelles Paket: ${d.pkg}`,
                                     `Gesamtstand: ${d.tot.toLocaleString()}`,
                                     `Stück seit WP: ${d.ist.toLocaleString()}`
