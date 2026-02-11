@@ -140,9 +140,10 @@
 
     function renderList(data) {
         document.getElementById('machineList').innerHTML = data.map(d => {
-            // NEUE LOGIK: Button gesperrt, wenn Rest > Warnwert (aus Firebase Config)
-            // config.warn ist hier verfügbar, da wir es oben geladen haben
-            const isButtonDisabled = d.rest > config.warn; 
+            // 3.1: Plus-Button deaktiviert, solange Rest > Warnschwelle
+            const isPlusDisabled = d.rest > config.warn; 
+            // Korrektur-Button (-) deaktiviert, wenn Zähler bereits auf 0
+            const isMinusDisabled = d.cyc <= 0;
             
             return `
             <div class="row ${d.rest <= 0 ? 'blink' : ''}" style="border-left-color:${d.color}">
@@ -156,8 +157,13 @@
                 <div style="display:${currentUser ? 'flex' : 'none'}; gap:5px; margin-left:10px;">
                     ${d.needsReset ? 
                         `<button class="btn-reset-auto" onclick="autoReset('${d.id}', ${d.tot})">AUSTAUSCH</button>` :
-                        // Hier greift jetzt die Sperre basierend auf 'warn'
-                        `<button class="btn-cycle" ${isButtonDisabled ? 'disabled title="Erst aktiv bei Warnschwelle"' : ''} onclick="changeC('${d.id}', 1)">+</button>`
+                        `
+                        <button class="btn-cycle" ${isMinusDisabled ? 'disabled' : ''} 
+                                onclick="changeC('${d.id}', -1)" title="Korrektur (-1)">-</button>
+                        
+                        <button class="btn-cycle" ${isPlusDisabled ? 'disabled title="Erst aktiv ab Warnschwelle"' : ''} 
+                                onclick="changeC('${d.id}', 1)" title="Wartung erledigt (+1)">+</button>
+                        `
                     }
                 </div>
             </div>`;
@@ -199,33 +205,20 @@
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            // 1. Tooltip ausführlich und logisch angepasst
                             label: function(ctx) {
-                                const d = data[ctx.dataIndex]; // Zugriff auf das Daten-Objekt
+                                const d = data[ctx.dataIndex];
                                 let lines = [];
-
-                                // 1.1 / 1.2: Reststückzahl oder Überfällig-Text
                                 if (d.rest <= 0) {
                                     lines.push(`⚠️ Fällig seit: ${Math.abs(d.rest).toLocaleString()} Stk.`);
-                                    // (Datum kann hier nicht angezeigt werden, da nicht in DB gespeichert)
                                 } else {
                                     lines.push(`Rest bis Wartung: ${d.rest.toLocaleString()} Stk.`);
                                 }
-
-                                // 1.3: Paketname
                                 lines.push(`Paket offen: ${d.pkg}`);
-
-                                // 1.4: Dauer
                                 if(d.duration > 0) {
                                     lines.push(`Dauer: ca. ${d.duration} Min.`);
                                 }
-
-                                // 1.5: Gesamtstückzahl
                                 lines.push(`Gesamtstückzahl: ${d.tot.toLocaleString()}`);
-
-                                // 1.6: Seit letztem WP Wechsel
                                 lines.push(`Seit letztem WP-Wechsel: ${d.ist.toLocaleString()}`);
-
                                 return lines;
                             }
                         }
@@ -239,7 +232,7 @@
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true } // Y-Achse startet immer bei 0
+                    y: { beginAtZero: true }
                 }
             },
             plugins: [ChartDataLabels]
