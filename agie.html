@@ -9,24 +9,105 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
-        :root { 
-            --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-green: #008a4f; 
+        :root {
+            --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-green: #008a4f;
             --bosch-gray: #eff1f2; --bosch-dark-red: #8b0000;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bosch-gray); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .top-bar { height: 45px; background: linear-gradient(90deg, #d50000 0%, #003a6c 50%, #008a4f 100%); display: flex; align-items: center; padding: 0 15px; color: white; font-weight: bold; }
-        .header { background: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .main-layout { display: flex; flex: 1; padding: 20px; gap: 20px; overflow: hidden; }
-        .chart-area { flex: 3; background: white; padding: 20px; border-top: 4px solid var(--bosch-blue); border-radius: 4px; position: relative; }
-        .sidebar { flex: 1.5; background: white; border-top: 4px solid var(--bosch-blue); overflow-y: auto; padding: 10px; border-radius: 4px; }
-        .row { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; gap: 10px; border-left: 8px solid #ccc; margin-bottom: 5px; }
-        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bosch-gray);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Wichtig: body füllt den gesamten Viewport */
+            overflow: hidden; /* Verhindert, dass der body selbst scrollt, da wir interne Bereiche scrollen */
+        }
+        .top-bar {
+            height: 45px;
+            background: linear-gradient(90deg, #d50000 0%, #003a6c 50%, #008a4f 100%);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0; /* Verhindert, dass die Top-Bar schrumpft */
+        }
+        .header {
+            background: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-shrink: 0; /* Verhindert, dass der Header schrumpft */
+        }
+        .main-layout {
+            display: flex;
+            flex: 1; /* Wichtig: Lässt das main-layout den verfügbaren Platz einnehmen */
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden; /* Verhindert, dass das main-layout selbst scrollt, wir scrollen die Sidebar */
+        }
+        .chart-area {
+            flex: 3;
+            background: white;
+            padding: 20px;
+            border-top: 4px solid var(--bosch-blue);
+            border-radius: 4px;
+            position: relative;
+            overflow: auto; /* Wenn der Chart zu groß wird, soll er scrollen */
+        }
+        .sidebar {
+            flex: 1.5;
+            background: white;
+            border-top: 4px solid var(--bosch-blue);
+            overflow-y: auto; /* Wichtig: Ermöglicht vertikales Scrollen in der Sidebar */
+            padding: 10px;
+            border-radius: 4px;
+            /* box-sizing: border-box; */ /* Oft hilfreich bei Padding, kann aber hier weggelassen werden, da overflow:auto */
+            display: flex; /* Machen wir die Sidebar auch zum Flex-Container */
+            flex-direction: column; /* Damit die Inhalte untereinander angeordnet werden */
+        }
+        /* Eventuell noch die Anpassung für die einzelnen Reihen im Sidebar */
+        .row {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            gap: 10px;
+            border-left: 8px solid #ccc;
+            margin-bottom: 5px;
+            flex-shrink: 0; /* Verhindert, dass eine Zeile schrumpft und so abgeschnitten wird */
+        }
+    
         .btn-cycle { padding: 8px 12px; cursor: pointer; border: 1px solid #ccc; background: white; font-weight: bold; border-radius: 2px; }
         .btn-cycle:hover { background: #f0f0f0; }
         .btn-reset-auto { background: var(--bosch-red); color: white; border: none; padding: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
-        
+    
         @keyframes blink-red { 0% { background: #fff; } 50% { background: #ffcccc; } 100% { background: #fff; } }
         .blink { animation: blink-red 1s infinite; }
+    
+        /* MEDIA QUERIES für Handys */
+        @media (max-width: 768px) { /* Beispiel-Breakpoint für Handys */
+            .main-layout {
+                flex-direction: column; /* Stapelt die Spalten auf Handys */
+                padding: 10px; /* Weniger Padding für kleine Bildschirme */
+                gap: 10px;
+            }
+            .chart-area, .sidebar {
+                flex: none; /* Deaktiviert Flex-Verhalten in Spalten für Handys */
+                width: 100%; /* Jede Spalte nimmt die volle Breite ein */
+                height: auto; /* Höhe flexibel für chart-area */
+            }
+            .chart-area {
+                min-height: 300px; /* Mindesthöhe für den Chart auf Handys */
+            }
+            .sidebar {
+                height: 50vh; /* Beispiel: Sidebar nimmt 50% der Viewport-Höhe ein */
+                /* Alternativ: max-height: calc(100vh - 45px - 60px - 10px); */ /* Viewport abzüglich Top-Bar, Header, Padding */
+                overflow-y: auto; /* Scrollbar für die Sidebar auf Handys */
+            }
+        }
     </style>
 </head>
 <body onmousemove="resetTimer()">
