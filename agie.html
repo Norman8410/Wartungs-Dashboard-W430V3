@@ -140,9 +140,9 @@
 
     function renderList(data) {
         document.getElementById('machineList').innerHTML = data.map(d => {
-            // Button deaktivieren, wenn Rest > 0 (3.1)
-            // Ausnahme: Wenn "Austausch" ansteht, ist der Reset-Button immer aktiv.
-            const isButtonDisabled = d.rest > 0;
+            // NEUE LOGIK: Button gesperrt, wenn Rest > Warnwert (aus Firebase Config)
+            // config.warn ist hier verfügbar, da wir es oben geladen haben
+            const isButtonDisabled = d.rest > config.warn; 
             
             return `
             <div class="row ${d.rest <= 0 ? 'blink' : ''}" style="border-left-color:${d.color}">
@@ -156,8 +156,8 @@
                 <div style="display:${currentUser ? 'flex' : 'none'}; gap:5px; margin-left:10px;">
                     ${d.needsReset ? 
                         `<button class="btn-reset-auto" onclick="autoReset('${d.id}', ${d.tot})">AUSTAUSCH</button>` :
-                        // 3.1: Disabled Attribut hinzugefügt
-                        `<button class="btn-cycle" ${isButtonDisabled ? 'disabled title="Erst bei Fälligkeit aktiv"' : ''} onclick="changeC('${d.id}', 1)">+</button>`
+                        // Hier greift jetzt die Sperre basierend auf 'warn'
+                        `<button class="btn-cycle" ${isButtonDisabled ? 'disabled title="Erst aktiv bei Warnschwelle"' : ''} onclick="changeC('${d.id}', 1)">+</button>`
                     }
                 </div>
             </div>`;
