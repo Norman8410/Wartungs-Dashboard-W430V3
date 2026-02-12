@@ -64,7 +64,6 @@
         inactivityTimer = setTimeout(() => { window.close(); }, 70000);
     }
 
-    // --- NEU: Logging Funktion ---
     async function writeLog(action, machine, details) {
         if (!auth.currentUser) return;
         const logEntry = {
@@ -108,22 +107,23 @@
                 
                 const tot = parseInt(item.Parts) || 0;
                 const off = offsets[id] || 0;
-                // Berechnung des echten Ist-Standes
-                const echterIst = tot - off; 
-                // Deckelung: Wenn echterIst größer als das Limit ist, nimm das Limit
-                const ist = Math.min(echterIst, config.maxLimit); 
                 
+                // --- WIEDERHERGESTELLT: Echte Berechnung ohne Deckelung ---
+                const ist = tot - off; 
                 const cyc = cycles[id] || 0;
                 
                 const step = config.steps[cyc] || { target: config.maxLimit, pkg: "AUSTAUSCH" };
-                const isOverMax = ist >= config.maxLimit;
                 
-                const targetVal = isOverMax ? config.maxLimit : step.target;
-                const rest = targetVal - ist;
-                const pkgName = isOverMax ? "WP RESET / AUSTAUSCH" : step.pkg;
+                // Ein Reset/Austausch ist nötig, wenn das absolute Limit erreicht ist
+                const needsReset = ist >= config.maxLimit;
+                
+                const targetVal = needsReset ? config.maxLimit : step.target;
+                const rest = targetVal - ist; // Wird negativ, wenn ist > targetVal
+                
+                const pkgName = needsReset ? "WP RESET / AUSTAUSCH" : step.pkg;
                 const duration = getDuration(step.pkg, config.times);
 
-                return { id, rest, ist, tot, cyc, pkg: pkgName, duration, needsReset: isOverMax, color: getC(rest, isOverMax) };
+                return { id, rest, ist, tot, cyc, pkg: pkgName, duration, needsReset, color: getC(rest, needsReset) };
             }).filter(d => d !== null).sort((a,b) => a.rest - b.rest);
 
             renderList(data);
@@ -176,39 +176,28 @@
         const currentCyc = snap.val() || 0;
         const nextCyc = currentCyc + v;
 
-        // --- NEUE LOGIK: Prüfung gegen das Maximum ---
-        if (v > 0) { // Nur bei Erhöhung (+) prüfen
-            // Prüfen, ob überhaupt noch ein Schritt in der Config existiert
+        if (v > 0) {
             if (nextCyc >= config.steps.length) {
                 alert("Maximales Wartungsintervall erreicht! Ein WP-Wechsel (RESET) ist erforderlich.");
                 return;
             }
-
-            // Optional: Prüfen, ob der aktuelle Rest-Wert überhaupt eine Wartung zulässt
-            // (Verhindert versehentliches Klicken bei hohen Restwerten)
+            // Sicherheitsabfrage bei verfrühtem Klick
             const snapState = await db.ref('maintenanceState').once('value');
             const state = snapState.val() || {};
             const raw = state.cloudRawData.find(item => (item.StationNo || item.STATIONNO) == id);
             if (raw) {
-                const tot = parseInt(raw.Parts) || 0;
-                const off = (state.agieOffsets && state.agieOffsets[id]) || 0;
-                const ist = tot - off;
-                const currentStep = config.steps[currentCyc] || { target: config.maxLimit };
-                
-                // Wenn man noch weit vom Ziel entfernt ist, Sicherheitsabfrage
-                if (ist < (currentStep.target * 0.8)) { // Beispiel: Warnung wenn erst 80% erreicht
+                const ist = (parseInt(raw.Parts) || 0) - ((state.agieOffsets && state.agieOffsets[id]) || 0);
+                const currentTarget = config.steps[currentCyc]?.target || config.maxLimit;
+                if (ist < (currentTarget * 0.8)) {
                     if(!confirm("Die Wartung ist laut Stückzahl noch nicht fällig. Trotzdem verbuchen?")) return;
                 }
             }
         }
 
-        // Unter 0 darf der Zyklus nicht fallen
         if (nextCyc < 0) return;
 
-        // Speichern
         await db.ref(`dashboardAssignments/A${id}`).set("");
         await ref.set(nextCyc);
-        
         await writeLog(v > 0 ? "WARTUNG_OK" : "KORREKTUR", `A-${id}`, `Zähler von ${currentCyc} auf ${nextCyc} geändert.`);
     }
 
@@ -253,7 +242,7 @@
                         formatter: (val) => val.toLocaleString() 
                     }
                 },
-                scales: { y: { beginAtZero: true } }
+                scales: { y: { beginAtZero: false } } // beginAtZero auf false, damit Minuswerte besser sichtbar sind
             },
             plugins: [ChartDataLabels]
         });
