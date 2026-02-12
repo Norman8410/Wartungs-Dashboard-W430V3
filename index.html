@@ -7,11 +7,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-green: #008a4f; --bosch-gray: #eff1f2; --bosch-dark-red: #8b0000; }
+        :root { --bosch-red: #d50000; --bosch-blue: #003a6c; --bosch-green: #008a4f; --bosch-gray: #eff1f2; --bosch-purple: #93186c; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bosch-gray); margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         .top-bar { height: 45px; background: linear-gradient(90deg, #d50000 0%, #003a6c 50%, #008a4f 100%); display: flex; align-items: center; padding: 0 15px; color: white; font-weight: bold; }
         .header { background: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; }
+        
+        /* GRID AUF 4 SPALTEN ERWEITERT */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 20px; flex: 1; overflow: hidden; }
+        
         .column { background: white; border-top: 5px solid var(--bosch-blue); display: flex; flex-direction: column; overflow: hidden; border-radius: 4px; }
         .col-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
         .col-header a { text-decoration: none; color: var(--bosch-blue); transition: color 0.2s; display: flex; align-items: center; gap: 5px; }
@@ -80,12 +83,19 @@
         <div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/agie.html" target="_blank">⚡ Agie <span>➔</span></a><div id="count-agie">0</div></div>
         <div class="machine-list" id="list-agie"></div>
     </div>
+    
     <div class="column" style="border-top-color: var(--bosch-green);">
-        <div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/unotron.html" target="_blank">🧪 Unotron <span>➔</span></a><div id="count-uno">0</div></div>
+        <div class="col-header"><a href="https://norman8410.github.io/unotron-wartung/" target="_blank">🧪 Unotron <span>➔</span></a><div id="count-uno">0</div></div>
         <div class="machine-list" id="list-uno"></div>
     </div>
+
+    <div class="column" style="border-top-color: var(--bosch-purple);">
+        <div class="col-header"><a href="#" onclick="alert('Detailseite für Automatik noch nicht verfügbar'); return false;">🤖 Unotron Auto <span>➔</span></a><div id="count-unoAuto">0</div></div>
+        <div class="machine-list" id="list-unoAuto"></div>
+    </div>
+
     <div class="column" style="border-top-color: #007bc0;">
-        <div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/he.html" target="_blank">⚙️ HE <span>➔</span></a><div id="count-he">0</div></div>
+        <div class="col-header"><a href="https://norman8410.github.io/HE-Wartung/" target="_blank">⚙️ HE <span>➔</span></a><div id="count-he">0</div></div>
         <div class="machine-list" id="list-he"></div>
     </div>
 </div>
@@ -108,7 +118,9 @@
     const firebaseConfig = { apiKey: "AIzaSyD6xGCtU-felOyO_BRsFnVlB4yhC46FgYg", authDomain: "bosch-agie-wartung.firebaseapp.com", databaseURL: "https://bosch-agie-wartung-default-rtdb.europe-west1.firebasedatabase.app", projectId: "bosch-agie-wartung" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(), auth = firebase.auth();
-    let state = { config:{}, assignments:{}, agie:{}, uno:{}, he:{}, maintConfig: {}, isRegMode: false };
+    
+    // Status erweitert um unoAuto
+    let state = { config:{}, assignments:{}, agie:{}, uno:{}, unoAuto:{}, he:{}, maintConfig: {}, isRegMode: false };
     let inactivityTimer;
 
     // --- LOGGING ---
@@ -162,7 +174,7 @@
             
             const s = await db.ref('config/inviteCode').once('value');
             if (!user || !mail || !pass) return alert("Bitte alle Felder füllen!");
-            if (inv !== s.val()) return alert("Einladungscode falsch!");
+            if (inv !== s.val()) return alert("Einladungscode falsch! Bitte beim TL/Admin erfragen.");
 
             const check = await db.ref(`usernames/${user}`).once('value');
             if (check.exists()) return alert("Benutzername bereits vergeben!");
@@ -237,9 +249,18 @@
     // --- WARTUNG LOGIK ---
     async function confirmMaint(prefix, id, isReset, total) {
         if (!auth.currentUser) return;
+        // Default (Agie)
         let root = 'maintenanceState', offK = 'agieOffsets';
+        
+        // Unotron Chemie/Manuell (Prefix U)
         if(prefix==='U'){ root='maintenanceStateUnotron'; offK='unotronOffsets'; }
+        
+        // Unotron Automatik (Prefix UA)
+        if(prefix==='UA'){ root='maintenanceStateUnotronAuto'; offK='unotronAutoOffsets'; }
+        
+        // HE (Prefix H)
         if(prefix==='H'){ root='maintenanceStateHE'; offK='heOffsets'; }
+
         if (isReset) {
             if(!confirm("Reset?")) return;
             await db.ref(`${root}/${offK}/${id}`).set(total);
@@ -259,12 +280,17 @@
     function getDuration(p, t) { if(!p||p.includes("RESET")||!t)return 0; return p.split('/').reduce((a,c)=>{let k=c.toUpperCase().trim(); if(!k.startsWith("P"))k="P"+k; return a+(t[k]||0);},0); }
     function resetInactivityTimer() { clearTimeout(inactivityTimer); if(auth.currentUser) inactivityTimer=setTimeout(()=>auth.signOut(),180000); }
 
+    // --- EVENT LISTENER ERWEITERT ---
     db.ref('maintenanceConfig').on('value', s => { state.maintConfig = s.val() || {}; updateUI(); });
+    
     db.ref('maintenanceState').on('value', s => { state.agie = s.val() || {}; updateUI(); });
     db.ref('maintenanceStateUnotron').on('value', s => { state.uno = s.val() || {}; updateUI(); });
+    db.ref('maintenanceStateUnotronAuto').on('value', s => { state.unoAuto = s.val() || {}; updateUI(); }); // NEU
     db.ref('maintenanceStateHE').on('value', s => { state.he = s.val() || {}; updateUI(); });
+    
     db.ref('dashboardAssignments').on('value', s => { state.assignments = s.val() || {}; updateUI(); });
     db.ref('config').on('value', s => { state.config = s.val() || {}; updateUI(); });
+    
     auth.onAuthStateChanged(u => { 
         document.getElementById('authBtn').innerText = u ? "🔓 Logout" : "🔑 Login"; 
         document.getElementById('logDownloadBtn').style.display = u ? "block" : "none";
@@ -273,13 +299,21 @@
 
     function updateUI() { 
         if(!state.maintConfig.agie) return; 
+        
         renderCol('list-agie', 'count-agie', state.agie, 'A', state.maintConfig.agie); 
         renderCol('list-uno', 'count-uno', state.uno, 'U', state.maintConfig.unotron); 
+        // Rendering für Unotron Automatik (UA)
+        renderCol('list-unoAuto', 'count-unoAuto', state.unoAuto, 'UA', state.maintConfig.unotronAuto); 
         renderCol('list-he', 'count-he', state.he, 'H', state.maintConfig.he); 
     }
 
     function renderCol(listId, countId, raw, prefix, cfg) {
-        if(!raw || !raw.cloudRawData || !cfg) return;
+        if(!raw || !raw.cloudRawData || !cfg) {
+            document.getElementById(listId).innerHTML = '<div style="padding:10px; color:#777; font-style:italic;">Keine Daten...</div>';
+            document.getElementById(countId).innerText = "0";
+            return;
+        }
+
         let totalMin = 0;
         
         const data = raw.cloudRawData.map(item => {
@@ -287,7 +321,13 @@
             if(!sId) return null;
 
             const aktuellerStand = parseInt(item.Parts || item["COUNT(*)"] || item.parts) || 0;
-            const offK = prefix === 'A' ? 'agieOffsets' : (prefix === 'H' ? 'heOffsets' : 'unotronOffsets');
+            
+            // Offset Key Auswahl basierend auf Prefix
+            let offK = 'agieOffsets';
+            if (prefix === 'U') offK = 'unotronOffsets';
+            if (prefix === 'UA') offK = 'unotronAutoOffsets';
+            if (prefix === 'H') offK = 'heOffsets';
+
             const offset = (raw[offK] && raw[offK][sId]) || 0;
             const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
 
