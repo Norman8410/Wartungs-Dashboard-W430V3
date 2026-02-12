@@ -151,50 +151,48 @@
         document.getElementById('authIdentifier').parentElement.style.display = state.isRegMode ? "none" : "block";
     }
 
-async function processAuth() {
-    const iden = document.getElementById('authIdentifier').value.trim();
-    const pass = document.getElementById('authPass').value;
+    async function processAuth() {
+        const iden = document.getElementById('authIdentifier').value.trim();
+        const pass = document.getElementById('authPass').value;
 
-    if (state.isRegMode) {
-        const user = document.getElementById('authUsername').value.trim().toLowerCase();
-        const mail = document.getElementById('authEmail').value.trim();
-        const inv = document.getElementById('authInvite').value;
-        
-        const s = await db.ref('config/inviteCode').once('value');
-        if (!user || !mail || !pass) return alert("Bitte alle Felder füllen!");
-        if (inv !== s.val()) return alert("Einladungscode falsch!");
+        if (state.isRegMode) {
+            const user = document.getElementById('authUsername').value.trim().toLowerCase();
+            const mail = document.getElementById('authEmail').value.trim();
+            const inv = document.getElementById('authInvite').value;
+            
+            const s = await db.ref('config/inviteCode').once('value');
+            if (!user || !mail || !pass) return alert("Bitte alle Felder füllen!");
+            if (inv !== s.val()) return alert("Einladungscode falsch!");
 
-        const check = await db.ref(`usernames/${user}`).once('value');
-        if (check.exists()) return alert("Benutzername bereits vergeben!");
+            const check = await db.ref(`usernames/${user}`).once('value');
+            if (check.exists()) return alert("Benutzername bereits vergeben!");
 
-        try {
-            await auth.createUserWithEmailAndPassword(mail, pass);
-            // Speichert den Benutzernamen als Schlüssel und die E-Mail als Wert
-            await db.ref(`usernames/${user}`).set(mail); 
-            location.reload();
-        } catch(e) { 
-            alert("Fehler bei Registrierung: " + e.message); 
-        }
-    } else {
-        let targetMail = iden;
-        // Wenn keine E-Mail (kein @), dann im Pfad usernames suchen
-        if (!iden.includes('@')) {
-            const lowerIden = iden.toLowerCase();
-            const s = await db.ref(`usernames/${lowerIden}`).once('value');
-            if (!s.exists()) {
-                return alert("Benutzername nicht gefunden!");
+            try {
+                await auth.createUserWithEmailAndPassword(mail, pass);
+                await db.ref(`usernames/${user}`).set(mail); 
+                location.reload();
+            } catch(e) { 
+                alert("Fehler bei Registrierung: " + e.message); 
             }
-            targetMail = s.val(); // Hier wird die hinterlegte E-Mail geholt
-        }
+        } else {
+            let targetMail = iden;
+            if (!iden.includes('@')) {
+                const lowerIden = iden.toLowerCase();
+                const s = await db.ref(`usernames/${lowerIden}`).once('value');
+                if (!s.exists()) {
+                    return alert("Benutzername nicht gefunden! Bitte registrieren Sie sich oder nutzen Sie Ihre E-Mail.");
+                }
+                targetMail = s.val(); 
+            }
 
-        try {
-            await auth.signInWithEmailAndPassword(targetMail, pass);
-            document.getElementById('authModal').style.display = 'none';
-        } catch(e) { 
-            alert("Login fehlgeschlagen: " + e.message); 
+            try {
+                await auth.signInWithEmailAndPassword(targetMail, pass);
+                document.getElementById('authModal').style.display = 'none';
+            } catch(e) { 
+                alert("Login fehlgeschlagen: " + e.message); 
+            }
         }
     }
-}
 
     // --- ADMIN / EINSTELLER ---
     function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; document.getElementById('AdminPWInput').value = ''; document.getElementById('adminLoginView').style.display = 'block'; document.getElementById('adminManagerView').style.display = 'none'; }
@@ -280,7 +278,7 @@ async function processAuth() {
         renderCol('list-he', 'count-he', state.he, 'H', state.maintConfig.he); 
     }
 
-function renderCol(listId, countId, raw, prefix, cfg) {
+    function renderCol(listId, countId, raw, prefix, cfg) {
         if(!raw || !raw.cloudRawData || !cfg) return;
         let totalMin = 0;
         
@@ -288,27 +286,20 @@ function renderCol(listId, countId, raw, prefix, cfg) {
             const sId = item.StationNo || item.STATIONNO || item.stationNo; 
             if(!sId) return null;
 
-            // 1. Aktuelle Stückzahl holen (flexibel je nach API-Feldname)
             const aktuellerStand = parseInt(item.Parts || item["COUNT(*)"] || item.parts) || 0;
-            
-            // 2. Offsets und Zyklen holen
             const offK = prefix === 'A' ? 'agieOffsets' : (prefix === 'H' ? 'heOffsets' : 'unotronOffsets');
             const offset = (raw[offK] && raw[offK][sId]) || 0;
             const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
 
-            // 3. Berechnung "Ist" (Stückzahl seit letztem Reset)
             const ist = aktuellerStand - offset;
-
-            // 4. Zielwert und Paket ermitteln
             const step = cfg.steps[cyc] || { target: cfg.maxLimit, pkg: "RESET" };
             const isOverMax = ist >= cfg.maxLimit;
             const targetVal = isOverMax ? cfg.maxLimit : step.target;
             
-            // 5. WICHTIG: Rest berechnen und gegen Warnschwelle prüfen
             const rest = targetVal - ist;
             const dur = getDuration(isOverMax ? "RESET" : step.pkg, cfg.times);
 
-            // Nur zurückgeben, wenn die Wartung fällig oder im Warnbereich ist
+            // Filterung nach Warnschwelle
             if (rest <= cfg.warn) {
                 totalMin += dur;
                 return { 
@@ -326,11 +317,9 @@ function renderCol(listId, countId, raw, prefix, cfg) {
             return null;
         }).filter(m => m !== null).sort((a, b) => a.rest - b.rest);
 
-        // Anzeige updaten
         const badge = totalMin > 0 ? `<span class="time-badge">⏳ ${formatTotalTime(totalMin)}</span>` : "";
         document.getElementById(countId).innerHTML = `<span>${data.length}</span> ${badge}`;
         
-        // Liste rendern (wie gehabt)
         document.getElementById(listId).innerHTML = data.map(m => {
             const ass = state.assignments[prefix + m.sId] || "";
             const isW = ass !== "";
