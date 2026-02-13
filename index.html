@@ -11,11 +11,8 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bosch-gray); margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         .top-bar { height: 45px; background: linear-gradient(90deg, #d50000 0%, #003a6c 50%, #008a4f 100%); display: flex; align-items: center; padding: 0 15px; color: white; font-weight: bold; }
         .header { background: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Neuer Style für den zentralen Stunden-Zähler */
-        .total-workload { background: var(--bosch-blue); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 1.1em; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; }
+        .total-workload { background: var(--bosch-blue); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 1.1em; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-left: 20px;}
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; }
         .column { background: white; border-top: 5px solid var(--bosch-blue); display: flex; flex-direction: column; overflow: hidden; border-radius: 4px; }
         .col-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
         .col-header a { text-decoration: none; color: var(--bosch-blue); transition: color 0.2s; display: flex; align-items: center; gap: 5px; }
@@ -36,18 +33,20 @@
         .btn-done:disabled { opacity: 0.4; cursor: not-allowed; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 5000; }
         .modal-box { background: white; padding: 25px; width: 350px; border-top: 8px solid var(--bosch-red); border-radius: 4px; }
+        .form-group { margin-bottom: 15px; } .form-group input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         .nav-btn { padding: 8px 15px; cursor: pointer; border: 1px solid #ccc; background: white; font-weight: bold; color: var(--bosch-blue); border-radius: 4px; }
         .primary-btn { background: var(--bosch-blue); color: white; border: none; width: 100%; padding: 12px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .link-btn { background: none; border: none; color: var(--bosch-blue); text-decoration: underline; cursor: pointer; margin-top: 15px; display: block; width: 100%; text-align: center; }
     </style>
 </head>
-<body onmousedown="resetInactivityTimer()">
+<body onmousedown="resetInactivityTimer()" onkeydown="resetInactivityTimer()">
 
 <div class="top-bar">Zentrales Wartungs Dashboard W430</div>
 <div class="header">
-    <div style="display: flex; align-items: center; gap: 20px;">
+    <div style="display:flex; align-items:center;">
         <span style="color:var(--bosch-red);font-weight:900;font-size:24px;">BOSCH</span> 
-        <span style="font-weight:bold;color:#555;">Dashboard</span>
-        <div id="overall-workload" class="total-workload">Wartungsaufwand: 0h</div>
+        <span style="font-weight:bold;margin-left:10px;color:#555;">Dashboard</span>
+        <div id="overall-workload" class="total-workload">Lade Daten...</div>
     </div>
     <div style="display:flex; gap:10px;">
         <button id="logDownloadBtn" class="nav-btn" style="display:none; border-color:var(--bosch-blue);" onclick="downloadLogs()">📊 Log Download</button>
@@ -57,21 +56,42 @@
 </div>
 
 <div class="dashboard-grid">
-    <div class="column">
-        <div class="col-header"><a href="agie.html" target="_blank">⚡ Agie <span>➔</span></a><div id="count-agie">0</div></div>
-        <div class="machine-list" id="list-agie"></div>
+    <div class="column"><div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/agie.html" target="_blank">⚡ Agie <span>➔</span></a><div id="count-agie">0</div></div><div class="machine-list" id="list-agie"></div></div>
+    <div class="column" style="border-top-color: var(--bosch-green);"><div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/unotron.html" target="_blank">🧪 Unotron <span>➔</span></a><div id="count-uno">0</div></div><div class="machine-list" id="list-uno"></div></div>
+    <div class="column" style="border-top-color: #007bc0;"><div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/he.html" target="_blank">⚙️ HE <span>➔</span></a><div id="count-he">0</div></div><div class="machine-list" id="list-he"></div></div>
+    <div class="column" style="border-top-color: #8b0000;"><div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/unotron-auto.html" target="_blank">🤖 Unotron Auto <span>➔</span></a><div id="count-uno-auto">0</div></div><div class="machine-list" id="list-uno-auto"></div></div>
+    <div class="column" style="border-top-color: #9b59b6;"><div class="col-header"><a href="https://norman8410.github.io/Wartungs-Dashboard-W430V3/laser.html" target="_blank">💡 Laser <span>➔</span></a><div id="count-laser">0</div></div><div class="machine-list" id="list-laser"></div></div>
+</div>
+
+<div id="authModal" class="modal">
+    <div class="modal-box">
+        <h2 id="modalTitle" style="margin-top:0;">Login</h2>
+        <div id="authError" style="color:red; margin-bottom:10px; min-height:18px;"></div>
+        <div class="form-group"><input type="text" id="authIdentifier" placeholder="Benutzername oder E-Mail"></div>
+        <div class="form-group" id="userGroup" style="display:none;"><input type="text" id="authUsername" placeholder="Benutzername"></div>
+        <div id="emailGroup" style="display:none;" class="form-group"><input type="email" id="authEmail" placeholder="E-Mail"></div>
+        <div class="form-group"><input type="password" id="authPass" placeholder="Passwort"></div>
+        <div id="inviteGroup" style="display:none;" class="form-group"><input type="text" id="authInvite" placeholder="Einladungscode"></div>
+        <button class="primary-btn" id="mainAuthBtn" onclick="processAuth()">Anmelden</button>
+        <button class="link-btn" id="switchBtn" onclick="switchAuthMode()">Neu hier? Registrieren</button>
+        <button class="link-btn" style="color:gray; text-decoration:none;" onclick="closeAuthModal()">Abbrechen</button>
     </div>
-    <div class="column" style="border-top-color: var(--bosch-green);">
-        <div class="col-header"><a href="unotron.html" target="_blank">🧪 Unotron <span>➔</span></a><div id="count-uno">0</div></div>
-        <div class="machine-list" id="list-uno"></div>
-    </div>
-    <div class="column" style="border-top-color: #8b0000;">
-        <div class="col-header"><a href="unotron-auto.html" target="_blank">🤖 Unotron Auto <span>➔</span></a><div id="count-uno-auto">0</div></div>
-        <div class="machine-list" id="list-uno-auto"></div>
-    </div>
-    <div class="column" style="border-top-color: #007bc0;">
-        <div class="col-header"><a href="he.html" target="_blank">⚙️ HE <span>➔</span></a><div id="count-he">0</div></div>
-        <div class="machine-list" id="list-he"></div>
+</div>
+
+<div id="adminModal" class="modal">
+    <div class="modal-box" style="width: 400px;">
+        <h2 style="margin-top:0;">Einsteller Verwaltung</h2>
+        <div id="adminLoginView">
+            <div class="form-group">
+                <label>Admin-Passwort</label>
+                <input type="password" id="AdminPWInput" placeholder="Passwort eingeben">
+            </div>
+            <button class="primary-btn" onclick="checkAdminPW()">Entsperren</button>
+        </div>
+        <div id="adminManagerView" style="display:none;">
+             <div style="max-height: 200px; overflow-y: auto; background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px;"><ul id="adminEinstellerList" style="list-style: none; padding: 0; margin: 0;"></ul></div><div style="display: flex; gap: 10px; margin-bottom: 10px;"><input type="text" id="newNachname" placeholder="Nachname" style="flex: 1;"><input type="text" id="newVorname" placeholder="Vorname" style="flex: 1;"></div><button class="primary-btn" style="background: var(--bosch-green);" onclick="addEinsteller()">➕ Hinzufügen</button>
+        </div>
+        <button class="link-btn" style="color:gray; text-decoration:none;" onclick="closeAdminModal()">Schließen</button>
     </div>
 </div>
 
@@ -79,104 +99,153 @@
     const firebaseConfig = { apiKey: "AIzaSyD6xGCtU-felOyO_BRsFnVlB4yhC46FgYg", authDomain: "bosch-agie-wartung.firebaseapp.com", databaseURL: "https://bosch-agie-wartung-default-rtdb.europe-west1.firebasedatabase.app", projectId: "bosch-agie-wartung" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(), auth = firebase.auth();
-    let state = { config:{}, assignments:{}, agie:{}, uno:{}, unoAuto:{}, he:{}, maintConfig: {} };
-    
-    // Globale Variable für die Berechnung der Gesamtstunden
-    let totalOffenMinuten = 0;
+    let state = { config:{}, assignments:{}, agie:{}, uno:{}, he:{}, unoAuto:{}, laser:{}, maintConfig: {}, isRegMode: false };
+    let inactivityTimer;
 
-    const unoGroups = {
-        "100": [101, 102, 103, 104, 113, 114, 115, 116],
-        "200": [117, 112, 111, 110, 109, 108, 107, 106],
-        "300": [118, 119, 120, 121, 122, 123, 124, 125]
-    };
-
-    function updateUI() { 
-        if(!state.maintConfig.agie || !state.uno.cloudRawData) return; 
-        
-        totalOffenMinuten = 0; // Reset für Neuberechnung
-
-        // Spalten rendern (diese Funktionen erhöhen totalOffenMinuten)
-        renderCol('list-agie', 'count-agie', state.agie, 'A', state.maintConfig.agie); 
-        renderCol('list-uno', 'count-uno', state.uno, 'U', state.maintConfig.unotron); 
-        
-        // Unotron Auto Logik
-        const rawUnotron = state.uno.cloudRawData || [];
-        const autoRawList = [];
-        Object.keys(unoGroups).forEach(groupId => {
-            let sum = 0;
-            unoGroups[groupId].forEach(stationId => {
-                const match = rawUnotron.find(r => (r.STATIONNO || r.StationNo) == stationId);
-                if (match) sum += (parseInt(match["COUNT(*)"] || match.Parts) || 0);
-            });
-            autoRawList.push({ StationNo: groupId, Parts: sum });
-        });
-        const autoState = { cloudRawData: autoRawList, unotronOffsets: state.unoAuto.unotronOffsets || {}, extraCycles: state.unoAuto.extraCycles || {} };
-        renderCol('list-uno-auto', 'count-uno-auto', autoState, 'UA', state.maintConfig.unotronAuto);
-
-        renderCol('list-he', 'count-he', state.he, 'H', state.maintConfig.he); 
-
-        // Berechnung für 24h-Schichtbetrieb
-        const gesamtMinuten = totalOffenMinuten;
-        const tage = Math.floor(gesamtMinuten / 1440); // 1440 min = 24h
-        const restMinutenNachTagen = gesamtMinuten % 1440;
-        const stunden = Math.floor(restMinutenNachTagen / 60);
-        const minuten = restMinutenNachTagen % 60;
-        
-        let zeitAnzeige = "";
-        if (tage > 0) {
-            zeitAnzeige += tage + "d ";
-        }
-        if (stunden > 0 || tage > 0) {
-            zeitAnzeige += stunden + "h ";
-        }
-        zeitAnzeige += minuten + "m";
-        
-        document.getElementById('overall-workload').innerText = `Wartungsaufwand: ${zeitAnzeige}`;
+    // --- AUTH ---
+    function toggleAuthModal() { if (auth.currentUser) { auth.signOut(); return; } ['authIdentifier','authUsername','authEmail','authPass','authInvite'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); const authError = document.getElementById('authError'); if (authError) authError.innerText = ''; document.getElementById('authModal').style.display = 'flex'; }
+    function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
+    function switchAuthMode() {
+        state.isRegMode = !state.isRegMode;
+        document.getElementById('modalTitle').innerText = state.isRegMode ? "Registrieren" : "Login";
+        document.getElementById('mainAuthBtn').innerText = state.isRegMode ? "Account erstellen" : "Anmelden";
+        document.getElementById('switchBtn').innerText = state.isRegMode ? "Zum Login" : "Neu hier? Registrieren";
+        document.getElementById('userGroup').style.display = state.isRegMode ? "block" : "none";
+        document.getElementById('emailGroup').style.display = state.isRegMode ? "block" : "none";
+        document.getElementById('inviteGroup').style.display = state.isRegMode ? "block" : "none";
+        document.getElementById('authIdentifier').parentElement.style.display = state.isRegMode ? "none" : "block";
+        const authError = document.getElementById('authError'); if(authError) authError.innerText = '';
     }
+    
+    async function processAuth() {
+        const authError = document.getElementById('authError');
+        const pass = document.getElementById('authPass').value;
+        authError.innerText = '';
 
-    function renderCol(listId, countId, raw, prefix, cfg) {
-        if(!raw || !raw.cloudRawData || !cfg) return;
-        let colMin = 0;
-        const data = raw.cloudRawData.map(item => {
-            const sId = item.StationNo || item.STATIONNO || item.stationNo; 
-            const aktuellerStand = parseInt(item.Parts || item["COUNT(*)"] || item.parts) || 0;
-            let offK = (prefix === 'U' || prefix === 'UA') ? 'unotronOffsets' : (prefix === 'H' ? 'heOffsets' : 'agieOffsets');
-            const offset = (raw[offK] && raw[offK][sId]) || 0;
-            const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
-            const ist = aktuellerStand - offset;
-            const step = cfg.steps ? (cfg.steps[cyc] || { target: cfg.maxLimit, pkg: "RESET" }) : { target: cfg.maxLimit, pkg: "RESET" };
-            const isOverMax = ist >= cfg.maxLimit;
-            const rest = (isOverMax ? cfg.maxLimit : step.target) - ist;
-            const dur = getDuration(isOverMax ? "RESET" : step.pkg, cfg.times);
-
-            if (rest <= cfg.warn) {
-                colMin += dur;
-                totalOffenMinuten += dur; // Hier wird global aufsummiert
-                return { id: prefix + "-" + sId, sId, rest, pkg: isOverMax ? "WP RESET" : step.pkg, dur, warn: cfg.warn, crit: cfg.crit, isReset: isOverMax, rawTotal: aktuellerStand };
+        if (state.isRegMode) {
+            const user = document.getElementById('authUsername').value.trim().toLowerCase();
+            const mail = document.getElementById('authEmail').value.trim();
+            const inv = document.getElementById('authInvite').value;
+            if (!user || !mail || !pass || !inv) { authError.innerText = "Bitte alle Felder ausfüllen!"; return; }
+            if (!mail.endsWith('@de.bosch.com') && !mail.endsWith('@bcn.bosch.com')) { authError.innerText = "Nur E-Mails von @de.bosch.com oder @bcn.bosch.com sind erlaubt."; return; }
+            try {
+                const s = await db.ref('config/inviteCode').once('value');
+                if (inv !== s.val()) { authError.innerText = "Einladungscode falsch!"; return; }
+                const check = await db.ref(`usernames/${user}`).once('value');
+                if (check.exists()) { authError.innerText = "Benutzername bereits vergeben!"; return; }
+                await auth.createUserWithEmailAndPassword(mail, pass);
+                await db.ref(`usernames/${user}`).set(mail);
+                alert('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
+                switchAuthMode();
+            } catch(e) {
+                if (e.code === 'auth/email-already-in-use') authError.innerText = 'Diese E-Mail ist bereits registriert.';
+                else if (e.code === 'auth/weak-password') authError.innerText = 'Passwort zu schwach (min. 6 Zeichen).';
+                else authError.innerText = "Fehler bei Registrierung: " + e.message;
             }
-            return null;
-        }).filter(m => m !== null).sort((a, b) => a.rest - b.rest);
-
-        document.getElementById(countId).innerHTML = `<span>${data.length}</span> <span class="time-badge">⏳ ${Math.floor(colMin/60)}h ${colMin%60}m</span>`;
-        document.getElementById(listId).innerHTML = data.map(m => {
-            const ass = state.assignments[prefix + m.sId] || "";
-            const isW = ass !== "";
-            let cls = m.rest <= 0 ? 'overdue' : (m.rest <= m.crit ? 'critical' : 'warning');
-            return `<div class="card ${cls} ${isW ? 'in-progress' : ''}"><div class="card-info"><div><div class="m-id">${m.id}</div><div class="m-paket">${m.pkg}</div><div class="m-time">⏱ ${m.dur} Min.</div></div><div class="m-rest">${m.rest.toLocaleString()}</div></div><div class="card-actions"><select ${!auth.currentUser ? 'disabled' : ''} onchange="handleEinstellerChange('${prefix}', '${m.sId}', this.value)"><option value="">-- Einsteller --</option>${(state.config.einstellerListe || []).map(e => `<option value="${e}" ${ass === e ? 'selected' : ''}>${e}</option>`).join('')}</select><button class="${m.isReset ? 'btn-done reset-mode' : 'btn-done'}" ${!auth.currentUser ? 'disabled' : ''} onclick="confirmMaint('${prefix}','${m.sId}',${m.isReset},${m.rawTotal})">${m.isReset ? '🔄 Reset' : '✅ OK'}</button></div></div>`;
-        }).join('');
+        } else {
+            const iden = document.getElementById('authIdentifier').value.trim();
+            if (!iden || !pass) { authError.innerText = "Bitte alle Felder ausfüllen."; return; }
+            let targetMail = iden;
+            if (!iden.includes('@')) {
+                const lowerIden = iden.toLowerCase();
+                try {
+                    const s = await db.ref(`usernames/${lowerIden}`).once('value');
+                    if (!s.exists()) { authError.innerText = "Benutzername nicht gefunden!"; return; }
+                    targetMail = s.val();
+                } catch(e) { authError.innerText = "Fehler bei der Benutzersuche."; return; }
+            }
+            try {
+                await auth.signInWithEmailAndPassword(targetMail, pass);
+                closeAuthModal();
+            } catch(e) { authError.innerText = "Login fehlgeschlagen. Daten prüfen."; }
+        }
     }
-
-    function getDuration(p, t) { if(!p||p.includes("RESET")||!t) return 0; return p.split('/').reduce((a,c)=>{let k=c.toUpperCase().trim(); if(!k.startsWith("P"))k="P"+k; return a+(t[k]||0);},0); }
     
-    // Firebase Listener
+    // --- OTHER FUNCTIONS (collapsed for brevity) ---
+    async function writeLog(action, machine, details) { if (!auth.currentUser) return; await db.ref('logs').push({ zeit: new Date().toLocaleString('de-DE'), user: auth.currentUser.email, seite: 'Dashboard', aktion: action, maschine: machine, info: details }); }
+    async function downloadLogs() { const pw = prompt("Admin-Passwort erforderlich:"), snap = await db.ref('config/AdminPW').once('value'); if (pw !== snap.val()) return alert("Falsch!"); const logSnap = await db.ref('logs').once('value'), logs = logSnap.val(); if (!logs) return alert("Keine Daten."); let csv = "Zeitstempel;Benutzer;Seite;Aktion;Maschine;Details\n"; Object.values(logs).forEach(l => { csv += `${l.zeit};${l.user};${l.seite};${l.aktion};${l.maschine};${(l.info || '').replace(/(\r\n|\n|\r)/gm," ")}\n`; }); const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' }), link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.setAttribute("download", `WartungsLog_${new Date().toLocaleDateString()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; document.getElementById('AdminPWInput').value = ''; document.getElementById('adminLoginView').style.display = 'block'; document.getElementById('adminManagerView').style.display = 'none'; }
+    function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
+    async function checkAdminPW() { const input = document.getElementById('AdminPWInput').value, snap = await db.ref('config/AdminPW').once('value'); if (input === snap.val()) { document.getElementById('adminLoginView').style.display = 'none'; document.getElementById('adminManagerView').style.display = 'block'; renderAdminList(); } else { alert("Falsch!"); document.getElementById('AdminPWInput').value = ''; } }
+    function renderAdminList() { const list = state.config.einstellerListe || []; list.sort((a,b) => a.localeCompare(b)); document.getElementById('adminEinstellerList').innerHTML = list.map(name => `<li>${name}</li>`).join(''); }
+    async function handleEinstellerChange(prefix, sId, val) { if (!auth.currentUser) return; const fullId = prefix + sId; if (!val) { await db.ref(`dashboardAssignments/${fullId}`).set(""); return; } const pw = prompt("Admin-Passwort:"); const snap = await db.ref('config/AdminPW').once('value'); if (pw === snap.val()) { await db.ref(`dashboardAssignments/${fullId}`).set(val); await writeLog("ZUWEISUNG", `${prefix}-${sId}`, `Einsteller: ${val}`); } else { alert("Falsch!"); updateUI(); } }
+    async function addEinsteller() { const n = document.getElementById('newNachname').value.trim(), v = document.getElementById('newVorname').value.trim(); if (!n || !v) return; const full = `${n} ${v}`, list = state.config.einstellerListe || []; if (list.includes(full)) return alert("Existiert!"); await db.ref('config/einstellerListe').set([...list, full]); document.getElementById('newNachname').value = ''; document.getElementById('newVorname').value = ''; renderAdminList(); }
+    async function confirmMaint(prefix, id, isReset, total) { if (!auth.currentUser) return; const fullId = prefix + id; const assignedUser = state.assignments[fullId]; if (!assignedUser) { return alert("Bitte zuerst einen Einsteller zuweisen."); } let root, offK; if (prefix === 'A') { root = 'maintenanceState'; offK = 'agieOffsets'; } else if (prefix === 'U') { root = 'maintenanceStateUnotron'; offK = 'unotronOffsets'; } else if (prefix === 'H') { root = 'maintenanceStateHE'; offK = 'heOffsets'; } else if (prefix === 'UA') { root = 'maintenanceStateUnotronAuto'; offK = 'unotronOffsets'; } else if (prefix === 'L') { root = 'maintenanceStateLaser'; offK = 'laserOffsets'; } else { return; } if (isReset) { if(!confirm("Reset für " + fullId + " bestätigen?")) return; await db.ref(`${root}/${offK}/${id}`).set(total); await db.ref(`${root}/extraCycles/${id}`).set(0); await writeLog("RESET", `${prefix}-${id}`, `Vollständig auf ${total}`); } else { const ref = db.ref(`${root}/extraCycles/${id}`); const s = await ref.once('value'); await ref.set((s.val()||0)+1); await writeLog("WARTUNG_OK", `${prefix}-${id}`, "Zyklus +1"); } await db.ref(`dashboardAssignments/${fullId}`).set(""); }
+    function formatTotalTime(m) { if(m<=0)return"0m"; if(m<60)return m+"m"; const h=Math.floor(m/60); return h+"h "+(m%60)+"m"; }
+    function getDuration(p, t) { if(!p||p.includes("RESET")||!t)return 0; return p.split(/[\s\/]+/).reduce((a,c)=>{let k=c.toUpperCase().trim(); if(k && !k.startsWith("P"))k="P"+k; return a+(t[k]||0);},0); }
+    function resetInactivityTimer() { clearTimeout(inactivityTimer); if(auth.currentUser) inactivityTimer=setTimeout(()=>auth.signOut(),300000); }
+    
+    // --- FIREBASE & UI ---
+    auth.onAuthStateChanged(u => { document.getElementById('authBtn').innerText = u ? "🔓 Logout" : "🔑 Login"; document.getElementById('logDownloadBtn').style.display = u ? "block" : "none"; updateUI(); });
     db.ref('maintenanceConfig').on('value', s => { state.maintConfig = s.val() || {}; updateUI(); });
+    db.ref('config').on('value', s => { state.config = s.val() || {}; updateUI(); });
+    db.ref('dashboardAssignments').on('value', s => { state.assignments = s.val() || {}; updateUI(); });
     db.ref('maintenanceState').on('value', s => { state.agie = s.val() || {}; updateUI(); });
     db.ref('maintenanceStateUnotron').on('value', s => { state.uno = s.val() || {}; updateUI(); });
-    db.ref('maintenanceStateUnotronAuto').on('value', s => { state.unoAuto = s.val() || {}; updateUI(); });
     db.ref('maintenanceStateHE').on('value', s => { state.he = s.val() || {}; updateUI(); });
-    db.ref('dashboardAssignments').on('value', s => { state.assignments = s.val() || {}; updateUI(); });
-    db.ref('config').on('value', s => { state.config = s.val() || {}; updateUI(); });
-    auth.onAuthStateChanged(u => { updateUI(); });
+    db.ref('maintenanceStateUnotronAuto').on('value', s => { state.unoAuto = s.val() || {}; updateUI(); });
+    db.ref('maintenanceStateLaser').on('value', s => { state.laser = s.val() || {}; updateUI(); });
+
+    function updateUI() {
+        // THIS IS THE FIX: This check ensures rendering only happens when critical data is loaded.
+        if (!state.maintConfig || !state.maintConfig.agie || !state.uno || !state.uno.cloudRawData) {
+            return; 
+        }
+
+        let globalTotalMin = 0;
+        
+        function renderCol(listId, countId, raw, prefix, cfg) {
+            if(!raw || !raw.cloudRawData || !cfg) { document.getElementById(listId).innerHTML = ''; document.getElementById(countId).innerHTML = '0'; return; }
+            let totalMin = 0;
+            const data = raw.cloudRawData.map(item => {
+                const sId = item.StationNo || item.STATIONNO || item.stationNo; if(!sId) return null;
+                const aktuellerStand = parseInt(item.Parts || item["COUNT(*)"] || item.parts) || 0;
+                const offK = prefix === 'A' ? 'agieOffsets' : (prefix === 'H' ? 'heOffsets' : (prefix === 'L' ? 'laserOffsets' : 'unotronOffsets'));
+                const offset = (raw[offK] && raw[offK][sId]) || 0;
+                const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
+                const ist = aktuellerStand - offset;
+                const step = (cfg.steps && cfg.steps[cyc]) || { target: cfg.maxLimit, pkg: "RESET" };
+                const isOverMax = ist >= cfg.maxLimit;
+                const targetVal = isOverMax ? cfg.maxLimit : step.target;
+                const rest = targetVal - ist;
+                const dur = getDuration(isOverMax ? "RESET" : step.pkg, cfg.times);
+                if (rest <= (cfg.warn || 5000)) { totalMin += dur; return { id: prefix + sId, sId, rest, pkg: isOverMax ? "WP RESET" : step.pkg, dur, warn: cfg.warn, crit: cfg.crit, isReset: isOverMax, rawTotal: aktuellerStand }; }
+                return null;
+            }).filter(m => m !== null).sort((a, b) => a.rest - b.rest);
+            
+            globalTotalMin += totalMin;
+            const badge = totalMin > 0 ? `<span class="time-badge">⏳ ${formatTotalTime(totalMin)}</span>` : "";
+            document.getElementById(countId).innerHTML = `<span>${data.length}</span> ${badge}`;
+            document.getElementById(listId).innerHTML = data.map(m => {
+                const ass = state.assignments[m.id] || "";
+                let cls = 'warning'; if (m.rest <= 0) cls = 'overdue'; else if (m.rest <= m.crit) cls = 'critical';
+                return `<div class="card ${cls} ${ass ? 'in-progress' : ''}"><div class="card-info"><div><div class="m-id">${m.id}</div><div class="m-paket">${m.pkg}</div><div style="font-size:0.9em;color:#555">⏱ ${m.dur} Min.</div></div><div class="m-rest">${m.rest.toLocaleString()}</div></div><div class="card-actions"><select ${!auth.currentUser ? 'disabled' : ''} onchange="handleEinstellerChange('${prefix}', '${m.sId}', this.value)"><option value="">-- Einsteller --</option>${(state.config.einstellerListe || []).sort().map(e => `<option value="${e}" ${ass === e ? 'selected' : ''}>${e}</option>`).join('')}</select><button class="${m.isReset ? 'btn-done reset-mode' : 'btn-done'}" ${!auth.currentUser || !ass ? 'disabled' : ''} onclick="confirmMaint('${prefix}','${m.sId}',${m.isReset},${m.rawTotal})">${m.isReset ? '🔄 Reset' : '✅ OK'}</button></div></div>`;
+            }).join('');
+        }
+        
+        renderCol('list-agie', 'count-agie', state.agie, 'A', state.maintConfig.agie); 
+        renderCol('list-uno', 'count-uno', state.uno, 'U', state.maintConfig.unotron); 
+        renderCol('list-he', 'count-he', state.he, 'H', state.maintConfig.he);
+        
+        if (state.uno && state.uno.cloudRawData && state.maintConfig.unotronAuto) {
+            const unoGroups = { "100": [101,102,103,104,113,114,115,116], "200": [117,112,111,110,109,108,107,106], "300": [118,119,120,121,122,123,124,125] };
+            const autoRawList = Object.keys(unoGroups).map(groupId => {
+                const sum = unoGroups[groupId].reduce((acc, stationId) => {
+                    const match = (state.uno.cloudRawData||[]).find(r => (r.STATIONNO || r.StationNo) == stationId);
+                    return acc + (match ? (parseInt(match["COUNT(*)"] || match.Parts) || 0) : 0);
+                }, 0);
+                return { StationNo: groupId, Parts: sum };
+            });
+            const autoState = { ...state.unoAuto, cloudRawData: autoRawList };
+            renderCol('list-uno-auto', 'count-uno-auto', autoState, 'UA', state.maintConfig.unotronAuto);
+        } else {
+             renderCol('list-uno-auto', 'count-uno-auto', null, 'UA', null);
+        }
+        
+        renderCol('list-laser', 'count-laser', state.laser, 'L', state.maintConfig.laser);
+        
+        document.getElementById('overall-workload').innerText = `Gesamtaufwand: ${formatTotalTime(globalTotalMin)}`;
+    }
 </script>
 </body>
 </html>
