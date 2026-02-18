@@ -139,70 +139,70 @@
     }
 
     function renderCol(listId, countId, raw, prefix, cfg) {
-        if(!raw.cloudRawData) return 0;
-        let colMin = 0;
-        const offK = prefix==='A-'?'agieOffsets':(prefix==='H-'?'heOffsets':(prefix==='L-'?'laserOffsets':'unotronOffsets'));
+    if(!raw || !raw.cloudRawData) return 0;
+    let colMin = 0;
+    const offK = prefix==='A-'?'agieOffsets':(prefix==='H-'?'heOffsets':(prefix==='L-'?'laserOffsets':'unotronOffsets'));
+    
+    // Daten aufbereiten
+    const items = raw.cloudRawData.map(item => {
+        const sId = item.StationNo || item.STATIONNO;
+        const ist = (parseInt(item.Parts || item["COUNT(*)"]) || 0) - ((raw[offK] && raw[offK][sId]) || 0);
+        const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
+        const step = (cfg.steps && cfg.steps[cyc]) || { target: cfg.maxLimit, pkg: "RESET" };
+        const isReset = ist >= cfg.maxLimit || (cfg.steps && cyc >= cfg.steps.length);
+        const rest = (isReset ? cfg.maxLimit : step.target) - ist;
+        const dur = getDuration(isReset ? "RESET" : step.pkg, cfg.times);
         
-        // 1. Daten vorbereiten und Berechnungen durchführen
-        const items = raw.cloudRawData.map(item => {
-            const sId = item.StationNo || item.STATIONNO;
-            const ist = (parseInt(item.Parts || item["COUNT(*)"]) || 0) - ((raw[offK] && raw[offK][sId]) || 0);
-            const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
-            const step = (cfg.steps && cfg.steps[cyc]) || { target: cfg.maxLimit, pkg: "RESET" };
-            const isReset = ist >= cfg.maxLimit || (cfg.steps && cyc >= cfg.steps.length);
-            const rest = (isReset ? cfg.maxLimit : step.target) - ist;
-            const dur = getDuration(isReset ? "RESET" : step.pkg, cfg.times);
-            const totalParts = item.Parts || item["COUNT(*)"];
+        return { sId, rest, pkg: isReset ? "WP RESET" : step.pkg, dur, isReset, totalParts: item.Parts || item["COUNT(*)"] };
+    }).filter(item => item.rest <= (cfg.warn || 5000)); // Nur anzeigen, was fällig/nah dran ist
 
-            return { sId, rest, pkg: isReset ? "WP RESET" : step.pkg, dur, isReset, totalParts };
-        });
+    // Sortierung nach Dringlichkeit
+    items.sort((a, b) => a.rest - b.rest);
 
-        // 2. Sortieren nach Dringlichkeit (kleinster rest-Wert oben)
-        items.sort((a, b) => a.rest - b.rest);
+    // HTML generieren
+    const html = items.map(item => {
+        colMin += item.dur;
+        return buildCard(prefix, item.sId, item.rest, item.pkg, item.dur, item.isReset, item.totalParts);
+    }).join('');
 
-        // 3. HTML generieren und Minuten summieren
-        const html = items.map(item => {
-            if (item.rest > (cfg.warn || 5000)) return null;
-            colMin += item.dur;
-            return buildCard(prefix, item.sId, item.rest, item.pkg, item.dur, item.isReset, item.totalParts);
-        }).filter(x => x).join('');
+    document.getElementById(listId).innerHTML = html || '<div class="no-data">Alles i.O.</div>';
+    document.getElementById(countId).innerHTML = `<span class="time-badge">${formatTime(colMin)}</span>`;
+    return colMin;
+}
 
-        document.getElementById(listId).innerHTML = html || '<div class="no-data">Alles i.O.</div>';
-        document.getElementById(countId).innerHTML = `<span class="time-badge">${formatTime(colMin)}</span>`;
-        return colMin;
-    }
+function renderColTime(listId, countId, raw, prefix, cfg) {
+    if(!raw || !raw.cloudRawData) return 0;
+    let colMin = 0;
+    const currentWeek = getCW(new Date());
 
-    function renderColTime(listId, countId, raw, prefix, cfg) {
-        if(!raw.cloudRawData) return 0;
-        let colMin = 0;
-        const currentWeek = getCW(new Date());
+    // Daten aufbereiten
+    const items = Object.entries(raw.cloudRawData).map(([sId, mData]) => {
+        const lastW = mData.lastWartungKW || 0;
+        const cyc = mData.extraCycles || 0;
+        const step = (cfg.steps && cfg.steps[cyc]) || { interval: 52, pkg: "RESET" };
+        const targetWeek = lastW + step.interval;
+        const rest = targetWeek - currentWeek;
+        const dur = getDuration(step.pkg, cfg.times);
 
-        // 1. Daten vorbereiten und Berechnungen durchführen
-        const items = Object.entries(raw.cloudRawData).map(([sId, mData]) => {
-            const lastW = mData.lastWartungKW || 0;
-            const cyc = mData.extraCycles || 0;
-            const step = (cfg.steps && cfg.steps[cyc]) || { interval: 52, pkg: "RESET" };
-            const targetWeek = lastW + step.interval;
-            const rest = targetWeek - currentWeek;
-            const dur = getDuration(step.pkg, cfg.times);
+        return { sId, rest, pkg: step.pkg, dur, targetWeek };
+    }).filter(item => item.rest <= (cfg.warn || 4));
 
-            return { sId, rest, pkg: step.pkg, dur, targetWeek };
-        });
+    // Sortierung nach Dringlichkeit
+    items.sort((a, b) => a.rest - b.rest);
 
-        // 2. Sortieren nach Dringlichkeit (kleinster rest-Wert/Wochen oben)
-        items.sort((a, b) => a.rest - b.rest);
+    // HTML generieren
+    const html = items.map(item => {
+        colMin += item.dur;
+        // Erstellt den Text: "Fällig KW 9 / Aktuell KW 8" oder "Seit KW 7 / Aktuell KW 8"
+        const kwInfo = (item.rest < 0 ? `Seit KW ${item.targetWeek}` : `Fällig KW ${item.targetWeek}`) + ` (Aktuell ${currentWeek})`;
+        
+        return buildCard(prefix, item.sId, item.rest, item.pkg, item.dur, false, kwInfo);
+    }).join('');
 
-        // 3. HTML generieren
-        const html = items.map(item => {
-            if (item.rest > (cfg.warn || 4)) return null;
-            colMin += item.dur;
-            return buildCard(prefix, item.sId, item.rest, item.pkg, item.dur, false, "KW " + item.targetWeek);
-        }).filter(x => x).join('');
-
-        document.getElementById(listId).innerHTML = html || '<div class="no-data">Alles i.O.</div>';
-        document.getElementById(countId).innerHTML = `<span class="time-badge">${formatTime(colMin)}</span>`;
-        return colMin;
-    }
+    document.getElementById(listId).innerHTML = html || '<div class="no-data">Alles i.O.</div>';
+    document.getElementById(countId).innerHTML = `<span class="time-badge">${formatTime(colMin)}</span>`;
+    return colMin;
+}
 
     function buildCard(pre, id, rest, pkg, dur, isReset, rawTotal, kwKey) {
         const fullId = pre + id;
