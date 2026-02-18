@@ -143,18 +143,28 @@
         let colMin = 0;
         const offK = prefix==='A-'?'agieOffsets':(prefix==='H-'?'heOffsets':(prefix==='L-'?'laserOffsets':'unotronOffsets'));
         
-        const html = raw.cloudRawData.map(item => {
+        // 1. Daten vorbereiten und Berechnungen durchführen
+        const items = raw.cloudRawData.map(item => {
             const sId = item.StationNo || item.STATIONNO;
             const ist = (parseInt(item.Parts || item["COUNT(*)"]) || 0) - ((raw[offK] && raw[offK][sId]) || 0);
             const cyc = (raw.extraCycles && raw.extraCycles[sId]) || 0;
             const step = (cfg.steps && cfg.steps[cyc]) || { target: cfg.maxLimit, pkg: "RESET" };
             const isReset = ist >= cfg.maxLimit || (cfg.steps && cyc >= cfg.steps.length);
             const rest = (isReset ? cfg.maxLimit : step.target) - ist;
-
-            if (rest > (cfg.warn || 5000)) return null;
             const dur = getDuration(isReset ? "RESET" : step.pkg, cfg.times);
-            colMin += dur;
-            return buildCard(prefix, sId, rest, isReset ? "WP RESET" : step.pkg, dur, isReset, item.Parts || item["COUNT(*)"]);
+            const totalParts = item.Parts || item["COUNT(*)"];
+
+            return { sId, rest, pkg: isReset ? "WP RESET" : step.pkg, dur, isReset, totalParts };
+        });
+
+        // 2. Sortieren nach Dringlichkeit (kleinster rest-Wert oben)
+        items.sort((a, b) => a.rest - b.rest);
+
+        // 3. HTML generieren und Minuten summieren
+        const html = items.map(item => {
+            if (item.rest > (cfg.warn || 5000)) return null;
+            colMin += item.dur;
+            return buildCard(prefix, item.sId, item.rest, item.pkg, item.dur, item.isReset, item.totalParts);
         }).filter(x => x).join('');
 
         document.getElementById(listId).innerHTML = html || '<div class="no-data">Alles i.O.</div>';
