@@ -244,27 +244,35 @@
     }
 
     // --- AKTIONEN ---
-    async function handleMaint(pre, id, isReset, rawTotal, kwKey) {
-        if(!confirm("Aktion bestätigen?")) return;
-        const user = auth.currentUser.email;
-        if(kwKey && kwKey !== 'undefined') {
-            const path = `maintenanceStateKW/${kwKey}/extraCycles/${id}`;
-            const snap = await db.ref(path).once('value');
-            await db.ref(path).set(isReset ? 0 : (snap.val() || 0) + 1);
+async function handleMaint(pre, id, isReset, rawTotal, kwKey) {
+    if (!auth.currentUser) return;
+    const fullId = pre + id;
+    const week = getWeek(); 
+
+    try {
+        if (kwKey) {
+            // Passt zur neuen JSON-Struktur unter maintenanceStateKW
+            const baseRef = db.ref(`maintenanceStateKW/${kwKey}`);
+            await baseRef.child('lastWartungKW').child(id).set(week);
+            await baseRef.child('extraCycles').child(id).set(0);
         } else {
-            let node = 'maintenanceState' + (pre==='H-'?'HE':pre==='U-'?'Unotron':pre==='UA-'?'UnotronAuto':pre==='L-'?'Laser':'');
-            if(isReset) {
-                const offPath = pre==='A-'?'agieOffsets':pre==='H-'?'heOffsets':pre==='L-'?'laserOffsets':'unotronOffsets';
-                await db.ref(`${node}/${offPath}/${id}`).set(rawTotal);
-                await db.ref(`${node}/extraCycles/${id}`).set(0);
-            } else {
-                const snap = await db.ref(`${node}/extraCycles/${id}`).once('value');
-                await db.ref(`${node}/extraCycles/${id}`).set((snap.val() || 0) + 1);
-            }
+            // Passt zur Struktur unter maintenanceState (z.B. agieOffsets)
+            const offK = pre === 'A-' ? 'agieOffsets' : 
+                         pre === 'H-' ? 'heOffsets' : 
+                         pre === 'L-' ? 'laserOffsets' : 'unotronOffsets';
+            
+            await db.ref(`maintenanceState/${offK}/${id}`).set(rawTotal);
+            await db.ref(`maintenanceState/extraCycles/${id}`).set(0);
         }
-        await db.ref(`assignments/${pre}${id}`).remove();
-        db.ref('logs').push({ zeit: new Date().toLocaleString(), user, aktion: isReset?'RESET':'OK', maschine: pre+id });
+
+        // Bearbeiter entfernen
+        await db.ref(`assignments/${fullId}`).remove();
+        alert("Erfolgreich gespeichert!");
+    } catch (e) {
+        console.error("Fehler:", e);
+        alert("Speichern fehlgeschlagen!");
     }
+}
 
     // Auth & Admin Modals
     function toggleAuthModal() { if(auth.currentUser) auth.signOut(); else document.getElementById('authModal').style.display='flex'; }
